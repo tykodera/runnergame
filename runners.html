@@ -1,0 +1,1971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RUNNERS</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#060709;--bg2:#0c0f14;--bg3:#111520;--panel:#0a0d12;
+  --border:#1e2535;--border2:#3a4d66;
+  --accent:#e8632a;--accent2:#f0a060;--accentdim:#7a3010;
+  --text:#c8d4e8;--text2:#9aaac0;--text3:#606e88;
+  --green:#2de08a;--greendim:#0a3020;
+  --red:#e83a3a;--reddim:#3a0a0a;
+  --yellow:#e8c53a;--yellowdim:#3a2f0a;
+  --blue:#3a8ae8;--bluedim:#0a1f3a;
+  --purple:#a04ae8;--purpledim:#200a3a;
+  --teal:#2adde0;
+  --ui-scale:1;
+}
+html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monospace;overflow-x:hidden}
+
+/* LAYOUT */
+#app{max-width:1200px;margin:0 auto;padding:clamp(8px,1.5vw,20px) clamp(10px,2vw,28px);position:relative;min-height:100vh}
+
+/* RESPONSIVE SCALING */
+@media(min-width:1100px){
+  :root{--ui-scale:1.1}
+  .logo-wrap h1{font-size:38px;letter-spacing:10px}
+  .hud-val{font-size:18px}
+  .screen-body{padding:28px}
+  .weapon-card,.item-card{padding:18px}
+  .combatant{padding:18px}
+  .combatant-art{font-size:38px}
+  .combatant-name{font-size:15px}
+  .power-val{font-size:18px}
+  .result-big{font-size:44px}
+  .room-card{padding:22px 16px}
+  .room-card .r-icon{font-size:30px}
+  .btn{padding:12px 22px;font-size:12px}
+  .roulette-cell{width:110px;height:96px}
+  .roulette-stage{height:96px}
+  .roulette-belt{height:96px}
+  .roulette-cell-icon{font-size:22px}
+  .roulette-cell-label{font-size:11px}
+  .roulette-center-hl{width:110px}
+}
+@media(min-width:1400px){
+  :root{--ui-scale:1.2}
+  #app{max-width:1400px}
+  .logo-wrap h1{font-size:42px;letter-spacing:12px}
+  .hud{gap:12px}
+  .hud-val{font-size:20px}
+  .screen-body{padding:32px}
+  .shop-grid{grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+  .rooms-grid{gap:14px}
+  .combatant-art{font-size:42px}
+  .result-big{font-size:50px}
+  .roulette-cell{width:120px;height:100px}
+  .roulette-stage{height:100px}
+  .roulette-belt{height:100px}
+  .roulette-center-hl{width:120px}
+}
+@media(max-width:600px){
+  .hud{grid-template-columns:1fr 1fr;gap:6px}
+  .rooms-grid{grid-template-columns:1fr}
+  .combat-header{grid-template-columns:1fr;gap:10px}
+  .vs-badge{font-size:16px}
+  .shop-grid{grid-template-columns:1fr}
+  .header{flex-direction:column;align-items:flex-start;gap:8px}
+  .launch-logo h1{font-size:42px!important;letter-spacing:8px!important}
+  .diff-group{flex-direction:column;align-items:center}
+}
+.scanlines{position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.12) 3px,rgba(0,0,0,0.12) 4px);pointer-events:none;z-index:9999}
+.vignette{display:none}
+
+/* HEADER */
+.header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.logo-wrap h1{font-family:'Orbitron',monospace;font-size:32px;font-weight:900;color:var(--accent);letter-spacing:8px;line-height:1;text-shadow:0 0 40px rgba(232,99,42,0.4)}
+.logo-wrap .sub{font-size:9px;letter-spacing:5px;color:var(--text3);margin-top:3px}
+.version{font-size:9px;color:var(--text3);letter-spacing:2px;text-align:right;line-height:1.8}
+
+/* HUD */
+.hud{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:8px;margin-bottom:10px}
+.hud-cell{background:var(--panel);border:1px solid var(--border);padding:10px 12px;position:relative;overflow:hidden}
+.hud-cell::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:0.5}
+.hud-label{font-size:8px;letter-spacing:3px;color:var(--text3);margin-bottom:5px;text-transform:uppercase}
+.hud-val{font-family:'Orbitron',monospace;font-size:16px;font-weight:700;line-height:1}
+.hud-bar{height:4px;background:var(--bg3);margin-top:7px;overflow:hidden}
+.hud-bar-fill{height:100%;transition:width 0.4s ease,background 0.4s}
+
+/* DUNGEON MAP */
+.map-track{background:var(--panel);border:1px solid var(--border);padding:10px 8px;margin-bottom:10px;overflow:hidden}
+.map-label{font-size:8px;letter-spacing:3px;color:var(--text3);margin-bottom:8px}
+.map-nodes{display:flex;align-items:center;gap:0;width:100%}
+.map-node{width:clamp(24px,2.5vw,38px);height:clamp(24px,2.5vw,38px);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:clamp(8px,0.8vw,11px);position:relative;flex-shrink:1;min-width:0;transition:all 0.3s}
+.map-node.visited{background:var(--bg3);border-color:var(--border2)}
+.map-node.current{border-color:var(--accent);background:rgba(232,99,42,0.15);box-shadow:0 0 8px rgba(232,99,42,0.3)}
+.map-node.checkpoint{border-color:var(--blue)}
+.map-node.checkpoint.visited{background:rgba(58,138,232,0.1)}
+.map-node.basecamp{border-color:var(--green)}
+.map-node.boss-node{border-color:var(--red)}
+.map-connector{flex:1 1 6px;height:2px;background:var(--border);min-width:4px;max-width:14px}
+.map-connector.visited{background:var(--border2)}
+.node-num{position:absolute;bottom:-13px;left:50%;transform:translateX(-50%);font-size:7px;color:var(--text3);white-space:nowrap}
+
+/* SCREEN */
+.screen{background:var(--panel);border:1px solid var(--border);padding:0;position:relative;min-height:320px;overflow:hidden}
+.screen-header{background:var(--bg3);border-bottom:1px solid var(--border);padding:9px 16px;display:flex;align-items:center;gap:10px}
+.screen-title{font-size:9px;letter-spacing:4px;color:var(--text2);text-transform:uppercase}
+.screen-body{padding:20px}
+
+/* ROOMS */
+.rooms-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:4px}
+.room-card{background:var(--bg3);border:1px solid var(--border);padding:18px 14px;cursor:pointer;transition:all 0.2s;position:relative;display:flex;flex-direction:column;gap:6px;text-align:left}
+.room-card:hover{border-color:var(--accent);background:#0e1218;transform:translateY(-1px)}
+.room-card .r-tag{font-size:8px;letter-spacing:3px;color:var(--text3)}
+.room-card .r-icon{font-size:26px;margin:4px 0}
+.room-card .r-name{font-size:12px;color:var(--text2)}
+.room-card .r-enter{position:absolute;bottom:8px;right:10px;font-size:8px;color:var(--text3);letter-spacing:2px}
+
+/* BUTTONS */
+.btn{background:transparent;border:1px solid var(--border2);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:2px;padding:10px 18px;cursor:pointer;text-transform:uppercase;transition:all 0.18s;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn:active{transform:scale(0.97)}
+.btn-accent{border-color:var(--accent);color:var(--accent)}
+.btn-accent:hover{background:var(--accent);color:var(--bg)}
+.btn-green{border-color:var(--green);color:var(--green)}
+.btn-green:hover{background:var(--green);color:var(--bg)}
+.btn-red{border-color:var(--red);color:var(--red)}
+.btn-red:hover{background:var(--red);color:var(--bg)}
+.btn-blue{border-color:var(--blue);color:var(--blue)}
+.btn-blue:hover{background:var(--blue);color:var(--bg)}
+.btn:disabled{opacity:0.35;cursor:not-allowed;pointer-events:none}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+
+/* SHOP */
+.shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:12px}
+.weapon-card{background:var(--bg3);border:1px solid var(--border);padding:14px;cursor:pointer;transition:all 0.2s;position:relative}
+.weapon-card:hover{border-color:var(--accent);background:#0e1218}
+.weapon-card.owned{border-color:var(--green);cursor:default}
+.weapon-card.owned:hover{background:var(--bg3)}
+.weapon-card.equipped{border-color:var(--yellow);background:rgba(232,197,58,0.05)}
+.weapon-name{font-family:'Orbitron',monospace;font-size:12px;color:var(--text);margin-bottom:4px;font-weight:600}
+.weapon-tier{font-size:8px;letter-spacing:3px;margin-bottom:8px}
+.weapon-stats{display:flex;gap:12px;font-size:9px;color:var(--text2);margin:8px 0}
+.weapon-stat span{color:var(--accent);font-family:'Orbitron',monospace}
+.weapon-desc{font-size:10px;color:var(--text3);line-height:1.5;margin-bottom:10px}
+.weapon-price{font-family:'Orbitron',monospace;font-size:14px;color:var(--yellow);display:flex;align-items:center;gap:6px}
+.owned-badge{position:absolute;top:8px;right:8px;font-size:8px;letter-spacing:2px;padding:2px 6px;border:1px solid var(--green);color:var(--green)}
+.equip-badge{position:absolute;top:8px;right:8px;font-size:8px;letter-spacing:2px;padding:2px 6px;border:1px solid var(--yellow);color:var(--yellow)}
+
+/* SCROLL ROULETTE */
+.roulette-container{display:flex;flex-direction:column;align-items:center;gap:16px;width:100%}
+.roulette-stage{width:100%;position:relative;background:var(--bg);border-top:1px solid var(--border2);border-bottom:1px solid var(--border2);overflow:hidden;height:86px}
+.roulette-pointer-top{position:absolute;top:0;left:50%;transform:translateX(-50%);width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-top:14px solid var(--accent);z-index:10;filter:drop-shadow(0 0 6px var(--accent))}
+.roulette-pointer-bot{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-bottom:14px solid var(--accent);z-index:10;filter:drop-shadow(0 0 6px var(--accent))}
+.roulette-fade-l{position:absolute;left:0;top:0;bottom:0;width:120px;background:linear-gradient(90deg,var(--bg) 30%,transparent);z-index:8;pointer-events:none}
+.roulette-fade-r{position:absolute;right:0;top:0;bottom:0;width:120px;background:linear-gradient(270deg,var(--bg) 30%,transparent);z-index:8;pointer-events:none}
+.roulette-center-hl{position:absolute;left:50%;top:0;bottom:0;width:96px;transform:translateX(-50%);border-left:1px solid rgba(232,99,42,0.6);border-right:1px solid rgba(232,99,42,0.6);background:rgba(232,99,42,0.05);z-index:7;pointer-events:none}
+.roulette-belt{display:flex;gap:0;will-change:transform;height:86px}
+.roulette-cell{flex-shrink:0;width:96px;height:86px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-right:1px solid rgba(255,255,255,0.04)}
+.roulette-cell-icon{font-size:18px;line-height:1}
+.roulette-cell-label{font-family:'Orbitron',monospace;font-size:10px;font-weight:700;letter-spacing:0.5px;line-height:1.3;text-align:center;padding:0 4px}
+.roulette-cell-sub{font-size:8px;letter-spacing:1px;color:rgba(200,212,232,0.45);text-align:center}
+.spin-info{text-align:center;width:100%}
+.spin-title{font-family:'Orbitron',monospace;font-size:13px;color:var(--accent);letter-spacing:3px;margin-bottom:6px}
+.spin-sub{font-size:10px;color:var(--text3);letter-spacing:2px;line-height:1.6}
+.result-splash{text-align:center;padding:14px 0}
+.result-big{font-family:'Orbitron',monospace;font-size:38px;font-weight:900;line-height:1;margin-bottom:6px}
+.result-sub{font-size:10px;letter-spacing:3px;color:var(--text2)}
+
+/* COMBAT HEADER */
+.combat-header{display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:center;margin-bottom:16px}
+.combatant{background:var(--bg3);border:1px solid var(--border);padding:14px}
+.combatant-name{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;margin-bottom:4px}
+.combatant-art{font-size:32px;margin:6px 0;display:block}
+.vs-badge{font-family:'Orbitron',monospace;font-size:20px;font-weight:900;color:var(--red);text-align:center}
+.power-display{display:flex;align-items:center;gap:6px;margin-top:8px}
+.power-icon{font-size:12px}
+.power-val{font-family:'Orbitron',monospace;font-size:15px}
+.power-label{font-size:8px;color:var(--text3);letter-spacing:2px}
+
+/* ENEMY TIERS */
+.tier-grunt{color:var(--green)}
+.tier-soldier{color:var(--yellow)}
+.tier-elite{color:var(--accent)}
+.tier-boss{color:var(--red)}
+
+/* LOG */
+.log-wrap{background:var(--bg3);border:1px solid var(--border);padding:10px 12px;margin-top:10px;max-height:110px;overflow-y:auto}
+.log-line{font-size:10px;line-height:1.8;padding:0}
+.log-line.good{color:var(--green)}
+.log-line.bad{color:var(--red)}
+.log-line.sys{color:var(--accent2)}
+.log-line.info{color:var(--blue)}
+.log-line.warn{color:var(--yellow)}
+
+/* DEATH / WIN */
+.endscreen{text-align:center;padding:clamp(20px,4vw,50px) clamp(14px,3vw,30px)}
+.end-title{font-family:'Orbitron',monospace;letter-spacing:6px;font-weight:900;line-height:1;margin-bottom:10px}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(6px,1vw,12px);max-width:480px;margin:20px auto;text-align:left}
+.stat-box{background:var(--bg3);border:1px solid var(--border);padding:10px 12px}
+.stat-lbl{font-size:8px;letter-spacing:3px;color:var(--text3)}
+.stat-num{font-family:'Orbitron',monospace;font-size:18px;margin-top:3px}
+
+/* POWERUP DISPLAY */
+.powerup-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.powerup-chip{font-size:9px;letter-spacing:1px;padding:3px 8px;border:1px solid var(--purple);color:var(--purple);background:rgba(160,74,232,0.08);cursor:pointer;transition:background 0.15s}
+.powerup-chip:hover{background:rgba(160,74,232,0.2)}
+.powerup-chip.queued{border-color:var(--teal);color:var(--teal);background:rgba(0,200,180,0.08);animation:pulse 1.2s infinite}
+.powerup-chip.queued:hover{background:rgba(0,200,180,0.2)}
+.inv-chip{cursor:pointer;transition:background 0.15s}
+.inv-chip:hover{background:rgba(232,99,42,0.15)}
+#infoPopup{display:none;position:fixed;z-index:9994;background:var(--panel);border:1px solid var(--border2);padding:14px 16px;max-width:320px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.6)}
+#infoPopup .popup-title{font-family:'Orbitron',monospace;font-size:12px;font-weight:700;letter-spacing:3px;margin-bottom:6px}
+#infoPopup .popup-desc{font-size:10px;color:var(--text2);line-height:1.6;letter-spacing:1px}
+#infoPopup .popup-close{position:absolute;top:8px;right:10px;background:none;border:none;color:var(--text3);font-size:14px;cursor:pointer}
+
+/* CONSUMABLES */
+.shop-tabs{display:flex;gap:0;margin-bottom:14px;border-bottom:1px solid var(--border)}
+.shop-tab{background:transparent;border:none;border-bottom:2px solid transparent;color:var(--text3);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:3px;padding:8px 18px;cursor:pointer;text-transform:uppercase;transition:all 0.18s;margin-bottom:-1px}
+.shop-tab:hover{color:var(--text)}
+.shop-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.item-card{background:var(--bg3);border:1px solid var(--border);padding:14px;transition:all 0.2s;position:relative}
+.item-card:hover{border-color:var(--purple);background:#0e0d18}
+.item-card.depleted{opacity:0.45;pointer-events:none}
+.item-name{font-family:'Orbitron',monospace;font-size:11px;color:var(--text);margin-bottom:3px;font-weight:600}
+.item-type{font-size:8px;letter-spacing:3px;color:var(--purple);margin-bottom:7px}
+.item-desc{font-size:10px;color:var(--text3);line-height:1.5;margin-bottom:10px}
+.item-effect{font-size:9px;color:var(--teal);letter-spacing:1px;margin-bottom:8px;padding:4px 8px;border-left:2px solid var(--teal);background:rgba(42,221,224,0.05)}
+.item-price{font-family:'Orbitron',monospace;font-size:13px;color:var(--yellow);display:flex;align-items:center;gap:8px}
+.item-qty-badge{position:absolute;top:8px;right:8px;font-size:9px;letter-spacing:1px;padding:2px 7px;border:1px solid var(--purple);color:var(--purple);background:rgba(160,74,232,0.1)}
+.inventory-strip{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.inv-chip{font-size:9px;letter-spacing:1px;padding:4px 10px;border:1px solid var(--teal);color:var(--teal);background:rgba(42,221,224,0.06);cursor:pointer;transition:all 0.15s;display:inline-flex;align-items:center;gap:5px}
+.inv-chip:hover{background:rgba(42,221,224,0.15);border-color:var(--teal)}
+.inv-chip .use-hint{font-size:8px;color:var(--text3)}
+/* ITEM STEPPER */
+.item-stepper{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--border);font-size:9px}
+.item-stepper:last-child{border-bottom:none}
+.item-stepper-icon{font-size:14px;flex-shrink:0}
+.item-stepper-name{flex:1;color:var(--text2);letter-spacing:1px;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item-stepper-ctrl{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.stepper-btn{background:transparent;border:1px solid var(--border2);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:12px;width:20px;height:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:all 0.15s;line-height:1}
+.stepper-btn:hover:not(:disabled){border-color:var(--teal);color:var(--teal)}
+.stepper-btn:disabled{opacity:0.25;cursor:not-allowed}
+.stepper-val{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;min-width:16px;text-align:center}
+.item-stepper-stock{font-size:8px;color:var(--text3);flex-shrink:0}
+
+/* LAUNCH PAGE */
+#launchPage{position:fixed;inset:0;z-index:9995;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column}
+#launchPage .scanlines-inner{position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.12) 3px,rgba(0,0,0,0.12) 4px);pointer-events:none}
+#launchPage .vignette-inner{display:none}
+.launch-content{position:relative;z-index:1;text-align:center;padding:20px}
+.launch-logo h1{font-family:'Orbitron',monospace;font-size:clamp(42px,8vw,90px);font-weight:900;color:var(--accent);letter-spacing:clamp(8px,1.5vw,20px);line-height:1;text-shadow:0 0 60px rgba(232,99,42,0.6)}
+.launch-logo .sub{font-size:10px;letter-spacing:6px;color:var(--text3);margin-top:6px}
+.launch-level{font-family:'Orbitron',monospace;font-size:13px;color:var(--text2);letter-spacing:4px;margin:24px 0 8px}
+.launch-level span{color:var(--accent)}
+.diff-group{display:flex;gap:10px;justify-content:center;margin:20px 0 28px}
+.diff-btn{background:transparent;border:1px solid var(--border2);color:var(--text3);font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:3px;padding:12px 22px;cursor:pointer;text-transform:uppercase;transition:all 0.2s;position:relative}
+.diff-btn:hover{border-color:var(--text2);color:var(--text)}
+.diff-btn.selected{border-width:2px}
+.diff-btn .diff-desc{font-size:8px;letter-spacing:2px;margin-top:4px;opacity:0.6}
+.ng-badge{font-family:'Orbitron',monospace;font-size:10px;letter-spacing:3px;color:var(--purple);margin-bottom:16px}
+
+/* ANIMATIONS */
+/* Logo glitch is driven by JS for true randomness — see glitchLogo() */
+.logo-wrap{position:relative}
+.logo-wrap h1{text-shadow:0 0 40px rgba(232,99,42,0.5)}
+
+/* SCREEN DAMAGE HIT */
+@keyframes dmg-flash{
+  0%{background:rgba(232,40,40,0.18);clip-path:none}
+  6%{background:rgba(232,40,40,0.28);clip-path:polygon(0 18%,100% 18%,100% 42%,0 42%);transform:skewX(-1.5deg) translateX(3px)}
+  10%{background:rgba(200,20,20,0.22);clip-path:none;transform:none}
+  18%{background:rgba(232,40,40,0.15);clip-path:polygon(0 60%,100% 60%,100% 82%,0 82%);transform:skewX(2deg) translateX(-2px)}
+  22%{background:rgba(180,10,10,0.1);clip-path:none;transform:none}
+  40%{background:rgba(150,0,0,0.05)}
+  100%{background:transparent}
+}
+@keyframes dmg-scanline{
+  0%{opacity:0.7;transform:translateY(-100%)}
+  100%{opacity:0;transform:translateY(200%)}
+}
+#dmgOverlay{
+  position:fixed;inset:0;pointer-events:none;z-index:9997;
+  display:none;overflow:hidden;
+}
+#dmgOverlay.active{display:block;animation:dmg-flash 0.55s ease-out forwards}
+#dmgOverlay::before{
+  content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(255,40,40,0.08) 3px,rgba(255,40,40,0.08) 4px);
+}
+#dmgOverlay::after{
+  content:'';position:absolute;left:0;right:0;height:60px;
+  background:linear-gradient(180deg,transparent,rgba(255,30,30,0.35),transparent);
+  animation:dmg-scanline 0.55s ease-out forwards;
+}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.pulsing{animation:pulse 1.2s infinite}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn 0.3s ease forwards}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
+.shake{animation:shake 0.35s ease}
+
+.notice{background:var(--bg3);border-left:3px solid var(--accent);padding:10px 14px;font-size:11px;color:var(--text2);line-height:1.7;margin-bottom:14px}
+</style>
+</head>
+<body>
+<div class="scanlines"></div>
+<div class="vignette"></div>
+<div id="dmgOverlay"></div>
+
+<!-- LAUNCH PAGE -->
+<div id="launchPage">
+  <div class="scanlines-inner"></div>
+  <div class="vignette-inner"></div>
+  <div class="launch-content">
+    <div class="logo-wrap launch-logo">
+      <h1 id="launchLogo">RUNNERS</h1>
+      <div class="sub">DEEP SECTOR INFILTRATION PROTOCOL</div>
+    </div>
+    <div class="launch-level" id="launchLevel"></div>
+    <div class="ng-badge" id="launchNgBadge"></div>
+    <div style="font-size:9px;letter-spacing:4px;color:var(--text3);margin-bottom:10px">SELECT DIFFICULTY</div>
+    <div class="diff-group" id="diffGroup"></div>
+    <button class="btn btn-accent" onclick="startFromLaunch()" style="padding:14px 36px;font-size:13px;letter-spacing:5px">▶ START RUN</button>
+  </div>
+</div>
+
+<div id="app">
+  <div class="header">
+    <div class="logo-wrap">
+      <h1>RUNNERS</h1>
+      <div class="sub">DEEP SECTOR INFILTRATION PROTOCOL // LVL <span id="playerLvl" style="color:var(--accent)">0</span></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="version"><span id="headerDiff"></span><br>DUNGEON GRID ONLINE<br>RUNNER UPLINK STABLE</div>
+      <button id="pauseBtn" onclick="togglePause()" style="background:transparent;border:1px solid var(--accent);color:var(--accent);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;padding:8px 14px;cursor:pointer;transition:all 0.18s;flex-shrink:0" onmouseover="this.style.background='var(--accent)';this.style.color='var(--bg)'" onmouseout="this.style.background='transparent';this.style.color='var(--accent)'">⏸ PAUSE</button>
+    </div>
+  </div>
+
+  <!-- PAUSE OVERLAY -->
+  <div id="pauseOverlay" style="display:none;position:fixed;inset:0;z-index:9996;background:rgba(6,7,9,0.92);backdrop-filter:blur(4px);align-items:center;justify-content:center">
+    <div style="background:var(--panel);border:1px solid var(--border2);padding:32px 28px;max-width:440px;width:90%;position:relative">
+      <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--accent),transparent)"></div>
+      <div style="font-family:'Orbitron',monospace;font-size:18px;font-weight:700;color:var(--accent);letter-spacing:6px;margin-bottom:4px">PAUSED</div>
+      <div style="font-size:9px;letter-spacing:3px;color:var(--text3);margin-bottom:20px">RUNNER UPLINK SUSPENDED</div>
+
+      <div style="background:var(--bg3);border:1px solid var(--border);padding:12px 14px;margin-bottom:18px">
+        <div style="font-size:8px;letter-spacing:3px;color:var(--text3);margin-bottom:10px">CURRENT RUN</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="pauseStats"></div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn btn-accent" onclick="togglePause()" style="width:100%;justify-content:center;letter-spacing:3px">▶ RESUME</button>
+        <button class="btn btn-blue" onclick="togglePause();restartFromCheckpoint()" id="pauseCheckpointBtn" style="width:100%;justify-content:center;letter-spacing:2px">↩ RESTART FROM CHECKPOINT</button>
+        <button class="btn btn-red" onclick="togglePause();showLaunchPage()" style="width:100%;justify-content:center;letter-spacing:3px">⟳ NEW RUNNER</button>
+      </div>
+
+      <div style="margin-top:16px;font-size:9px;color:var(--text3);text-align:center;letter-spacing:2px">ESC TO RESUME</div>
+    </div>
+  </div>
+
+  <div class="hud">
+    <div class="hud-cell">
+      <div class="hud-label">Runner Integrity</div>
+      <div class="hud-val" id="hpVal" style="color:var(--green)">100</div>
+      <div class="hud-bar"><div class="hud-bar-fill" id="hpBar" style="width:100%;background:var(--green)"></div></div>
+    </div>
+    <div class="hud-cell">
+      <div class="hud-label">Power Level</div>
+      <div class="hud-val" id="plVal" style="color:var(--accent)">10</div>
+      <div class="hud-bar"><div class="hud-bar-fill" id="plBar" style="width:10%;background:var(--accent)"></div></div>
+    </div>
+    <div class="hud-cell">
+      <div class="hud-label">Credits</div>
+      <div class="hud-val" id="credVal" style="color:var(--yellow)">200</div>
+    </div>
+    <div class="hud-cell">
+      <div class="hud-label">Weapon</div>
+      <div class="hud-val" id="weaponVal" style="color:var(--text2);font-size:11px">BARE HANDS</div>
+    </div>
+  </div>
+
+  <div class="map-track">
+    <div class="map-label">// SECTOR MAP — DUNGEON GRID</div>
+    <div class="map-nodes" id="mapNodes"></div>
+  </div>
+
+  <div class="screen" id="screen">
+    <div class="screen-header"><span class="screen-title" id="screenTitle">// INITIALIZING</span></div>
+    <div class="screen-body" id="screenBody"></div>
+  </div>
+
+  <div class="log-wrap" id="logWrap">
+    <div class="log-line sys">&gt; RUNNER UPLINK ESTABLISHED — WELCOME TO THE GRID</div>
+    <div class="log-line sys">&gt; START AT BASECAMP — PURCHASE WEAPONS BEFORE DEPLOYING</div>
+  </div>
+
+  <div style="margin-top:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <div style="font-size:9px;color:var(--text3);letter-spacing:2px">BUFFS:</div>
+    <div class="powerup-list" id="powerupList"><span style="font-size:9px;color:var(--text3)">NONE</span></div>
+  </div>
+  <div style="margin-top:6px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <div style="font-size:9px;color:var(--text3);letter-spacing:2px">INVENTORY:</div>
+    <div class="inventory-strip" id="inventoryStrip"><span style="font-size:9px;color:var(--text3)">EMPTY</span></div>
+  </div>
+</div>
+
+<div id="infoPopup">
+  <button class="popup-close" onclick="closeInfoPopup()">✕</button>
+  <div class="popup-title" id="popupTitle"></div>
+  <div class="popup-desc" id="popupDesc"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════
+const WEAPONS = [
+  {id:'fists',name:'BARE HANDS',tier:'NONE',icon:'✊',power:0,price:0,desc:'Unequipped. Good luck.',owned:true},
+  {id:'smg',name:'M75 SMG',tier:'TIER I',icon:'🔫',power:8,price:0,desc:'Standard-issue submachine gun. Compact and reliable.',owned:true},
+  {id:'shotgun',name:'WSTE M5',tier:'TIER II',icon:'💥',power:18,price:120,desc:'Combat shotgun. High spread, brutal at close range.',owned:false},
+  {id:'ar',name:'MA-75B ASSAULT',tier:'TIER II',icon:'⚡',power:22,price:180,desc:'Full-auto assault rifle. The workhorse of Runners.',owned:false},
+  {id:'rocket',name:'SPNKR SSM',tier:'TIER III',icon:'🚀',power:35,price:380,desc:'Rocket launcher. Excessive. Perfect.',owned:false},
+  {id:'flamer',name:'NAPALM UNIT',tier:'TIER III',icon:'🔥',power:32,price:320,desc:'Incendiary weapon. Melts through armor slowly.',owned:false},
+  {id:'fusion',name:'FUSION PISTOL',tier:'TIER IV',icon:'☢️',power:50,price:600,desc:'Experimental plasma weapon. Maximum yield.',owned:false},
+  {id:'alien',name:'PFHOR STAFF',tier:'TIER IV',icon:'🌑',power:55,price:750,desc:'Scavenged alien weapon. Unstable but devastating.',owned:false},
+];
+
+// Enemies: base power. scaledPower = base.power + pos*scaleMult
+// Zones: 1-4=GRUNT, 3-4=PRE-OUTPOST1 harder, 5-9=SOLDIER, 8-9=PRE-OUTPOST2 harder,
+//         10-14=ELITE, 13-14=PRE-OUTPOST3 harder, 15-18=BOSS-TIER, 19=FINAL
+const ENEMIES = [
+  // GRUNT — zones 1-4 (base power 8-18)
+  {id:'fighter',  name:'PFHOR FIGHTER',   tier:'GRUNT',   icon:'👾', power:8,  credits:[10,25], desc:'Standard infantry. Predictable.', minZone:1, maxZone:5},
+  {id:'drone',    name:"S'PHT DRONE",     tier:'GRUNT',   icon:'🤖', power:10, credits:[8,22],  desc:'Autonomous AI. Medium evasion.',  minZone:1, maxZone:5},
+  {id:'wasp',     name:'BIO WASP',        tier:'GRUNT',   icon:'🐝', power:12, credits:[12,20], desc:'Fast swarm construct.',           minZone:1, maxZone:4},
+  {id:'crawler',  name:'PFHOR CRAWLER',   tier:'GRUNT',   icon:'🦀', power:15, credits:[14,26], desc:'Aggressive but fragile.',         minZone:2, maxZone:5},
+  {id:'sentry',   name:'SENTRY DRONE',    tier:'GRUNT',   icon:'🔩', power:18, credits:[16,28], desc:'Automated patrol unit.',          minZone:3, maxZone:6},
+  // SOLDIER — zones 4-9 (base power 22-35)
+  {id:'enforcer', name:'PFHOR ENFORCER',  tier:'SOLDIER', icon:'🦂', power:22, credits:[25,45], desc:'Heavy unit. Well armored.',       minZone:4, maxZone:10},
+  {id:'hunter',   name:'HUNTER UNIT',     tier:'SOLDIER', icon:'🎯', power:26, credits:[30,50], desc:'Precision targeting.',            minZone:5, maxZone:10},
+  {id:'cyborg',   name:'CYBORG TROOPER',  tier:'SOLDIER', icon:'🦾', power:30, credits:[28,48], desc:'Flesh-machine hybrid.',           minZone:5, maxZone:11},
+  {id:'specter',  name:'PFHOR SPECTER',   tier:'SOLDIER', icon:'👻', power:33, credits:[32,55], desc:'Cloaking technology. Dangerous.', minZone:6, maxZone:11},
+  {id:'warden',   name:'SECTOR WARDEN',   tier:'SOLDIER', icon:'⚔️', power:38, credits:[38,60], desc:'Guardian variant. Enhanced reflexes.', minZone:7, maxZone:12},
+  // ELITE — zones 9-15 (base power 42-60)
+  {id:'juggernaut',name:'PFHOR JUGGERNAUT',tier:'ELITE', icon:'💀', power:42, credits:[50,80],  desc:'Command-class warrior.',         minZone:9, maxZone:16},
+  {id:'compiler', name:"S'PHT COMPILER",  tier:'ELITE',   icon:'⚡', power:48, credits:[55,90],  desc:'Ancient construct. Electrical.', minZone:10, maxZone:16},
+  {id:'sentinel', name:'APEX SENTINEL',   tier:'ELITE',   icon:'🔮', power:55, credits:[65,100], desc:'Top-tier automated defense.',    minZone:11, maxZone:17},
+  {id:'obliterator',name:'OBLITERATOR',   tier:'ELITE',   icon:'💥', power:62, credits:[70,110], desc:'Demolition unit. Extreme power.',minZone:13, maxZone:18},
+  // PRE-CHECKPOINT MINIBOSSES — appear in zones 3-4, 8-9, 13-14 only
+  {id:'alpha',    name:'ALPHA ENFORCER',  tier:'MINIBOSS', icon:'🔥', power:30, credits:[40,65],  desc:'Reinforced variant. Holds the line.',    minZone:3, maxZone:5, preCheckpoint:true},
+  {id:'berserker',name:'BERSERKER UNIT',  tier:'MINIBOSS', icon:'🩸', power:45, credits:[55,80],  desc:'Destabilised combat AI. Unpredictable.', minZone:8, maxZone:10, preCheckpoint:true},
+  {id:'titan',    name:'PFHOR TITAN',     tier:'MINIBOSS', icon:'🗿', power:65, credits:[75,115], desc:'Experimental heavy. Near-unstoppable.',  minZone:13, maxZone:15, preCheckpoint:true},
+  // BOSS — zones 15-19
+  {id:'warlord',  name:'PFHOR WARLORD',   tier:'BOSS',    icon:'👑', power:72, credits:[90,140],  desc:'Sector commander. Execute on sight.', minZone:15, maxZone:20},
+  {id:'archon',   name:"S'PHT ARCHON",    tier:'BOSS',    icon:'🌀', power:82, credits:[100,160], desc:'Ancient overlord. Near-sentient.',    minZone:16, maxZone:20},
+  {id:'darkstar', name:'THE DARK STAR',   tier:'BOSS',    icon:'🌑', power:95, credits:[120,180], desc:'Unknown entity. OMEGA classification.',minZone:18, maxZone:20},
+];
+
+// Dungeon: 20 nodes. 0=BASECAMP, 5=OUTPOST1, 10=OUTPOST2, 15=OUTPOST3, 19=BOSS
+const DUNGEON_LENGTH = 20;
+const CHECKPOINTS = [0,5,10,15];
+const BOSS_NODE = 19;
+
+const DIFFICULTIES = {
+  normal: {label:'NORMAL',desc:'STANDARD RUN',enemyMult:1.0,creditMult:1.0,shopLimitMult:1.0,color:'var(--green)'},
+  hard:   {label:'HARD',desc:'ENEMIES +30%',enemyMult:1.3,creditMult:0.85,shopLimitMult:0.75,color:'var(--yellow)'},
+  brutal: {label:'BRUTAL',desc:'ENEMIES +60%',enemyMult:1.6,creditMult:0.65,shopLimitMult:0.5,color:'var(--red)'},
+};
+
+let playerLevel=parseInt(localStorage.getItem('runners_playerLevel')||'0');
+let selectedDifficulty='normal';
+
+const CONSUMABLES = [
+  {id:'stim',name:'STIM PACK',icon:'💉',type:'MEDICAL',price:40,maxStack:3,
+   effect:'Restore 35 integrity instantly.',
+   timing:'any',
+   apply:s=>{s.hp=Math.min(s.maxHp,s.hp+35);return'Stim Pack used — +35 integrity.'}},
+  {id:'superStim',name:'TRAUMA SURGE',icon:'🩸',type:'MEDICAL',price:90,maxStack:2,
+   effect:'Fully restore integrity.',
+   timing:'any',
+   apply:s=>{s.hp=s.maxHp;return'Trauma Surge used — integrity fully restored.'}},
+  {id:'overclock',name:'OVERCLOCK',icon:'⚡',type:'COMBAT',price:55,maxStack:3,
+   effect:'+20 Power Level for next fight only.',
+   timing:'combat',
+   apply:s=>{s.tempPower=(s.tempPower||0)+20;return'Overclock active — +20 Power this fight.'}},
+  {id:'berserker',name:'BERSERKER',icon:'🔴',type:'COMBAT',price:80,maxStack:2,
+   effect:'+35 Power Level for next fight only.',
+   timing:'combat',
+   apply:s=>{s.tempPower=(s.tempPower||0)+35;return'Berserker active — +35 Power this fight.'}},
+  {id:'shield',name:'BLAST SHIELD',icon:'🛡️',type:'DEFENSE',price:60,maxStack:2,
+   effect:'Absorbs next loss penalty completely.',
+   timing:'any',
+   apply:s=>{s.shielded=true;return'Blast Shield armed — next loss penalty nullified.'}},
+  {id:'lucky',name:'LUCKY ROUND',icon:'🎰',type:'TACTICAL',price:45,maxStack:3,
+   effect:'+20% win odds on next roulette spin.',
+   timing:'combat',
+   apply:s=>{s.luckyBonus=(s.luckyBonus||0)+20;return'Lucky Round loaded — +20% win odds.'}},
+  {id:'emp',name:'EMP CHARGE',icon:'💫',type:'TACTICAL',price:70,maxStack:2,
+   effect:'Enemy power cut by 30% for one fight.',
+   timing:'combat',
+   apply:s=>{s.empActive=true;return'EMP primed — enemy power -30% this fight.'}},
+  {id:'scavkit',name:'SCAV KIT',icon:'📦',type:'UTILITY',price:35,maxStack:3,shopLimit:1,
+   effect:'Crack open for 30–100 credits (random).',
+   timing:'any',
+   apply:s=>{const g=rng(30,100);s.credits+=g;s.totalCredits+=g;return`Scav Kit cracked — +${g} credits.`}},
+  {id:'nanite',name:'NANITE BOOST',icon:'🔬',type:'UPGRADE',price:100,maxStack:2,
+   effect:'+12 Power Level permanently.',
+   timing:'any',
+   apply:s=>{s.powerLevel=Math.min(100,s.powerLevel+12);return'Nanite Boost injected — +12 Power Level permanently.'}},
+  {id:'adrenaline',name:'ADRENALINE',icon:'🧪',type:'MEDICAL',price:65,maxStack:2,
+   effect:'+8 Power Level + 25 integrity.',
+   timing:'any',
+   apply:s=>{s.powerLevel=Math.min(100,s.powerLevel+8);s.hp=Math.min(s.maxHp,s.hp+25);return'Adrenaline hit — +8 Power, +25 integrity.'}},
+];
+
+const POWERUPS_COMBAT = [
+  {id:'overdrive',name:'OVERDRIVE',desc:'+15 Power Level permanently',apply:s=>{s.powerLevel=Math.min(100,s.powerLevel+15)}},
+  {id:'medkit',name:'TRAUMA KIT',desc:'Restore 40 integrity',apply:s=>{s.hp=Math.min(s.maxHp,s.hp+40)}},
+  {id:'scavenge',name:'SCAVENGE',desc:'+80 credits',apply:s=>{s.credits+=80;s.totalCredits+=80}},
+  {id:'hardened',name:'HARDENED',desc:'Next loss: absorb penalty',apply:s=>{s.shielded=true}},
+  {id:'luckyspin',name:'LUCKY SPIN',desc:'Win odds +15% for next fight',apply:s=>{s.luckyBonus=(s.luckyBonus||0)+15}},
+  {id:'adrenaline',name:'ADRENALINE',desc:'+10 Power, +20 integrity',apply:s=>{s.powerLevel=Math.min(100,s.powerLevel+10);s.hp=Math.min(s.maxHp,s.hp+20)}},
+];
+
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let G = {
+  hp:100, maxHp:100,
+  powerLevel:10,
+  credits:200,
+  equippedWeapon:'smg',
+  ownedWeapons:['fists','smg'],
+  inventory:{}, // consumable id -> qty
+  shopBought:{}, // consumable id -> qty bought this shop visit
+  position:0,
+  lastCheckpoint:0,
+  phase:'shop',
+  currentEnemy:null,
+  spinning:false,
+  spinType:null,
+  activePowerups:[],
+  shielded:false,
+  luckyBonus:0,
+  tempPower:0,
+  empActive:false,
+  kills:0,
+  totalCredits:0,
+  lastItemUse:null, // {id, c, snapshot} — single-use undo for combat screen
+  difficulty:'normal',
+  ngPlusLevel:0,
+  tutorialDone:false,
+  tutorialEncounters:0,
+};
+
+// ═══════════════════════════════════════════
+// INFO POPUP
+// ═══════════════════════════════════════════
+function showInfoPopup(title,desc,evt){
+  const popup=document.getElementById('infoPopup');
+  document.getElementById('popupTitle').textContent=title;
+  document.getElementById('popupDesc').textContent=desc;
+  popup.style.display='block';
+  // Position near click
+  const rect=popup.getBoundingClientRect();
+  const x=Math.min(evt.clientX,window.innerWidth-340);
+  const y=Math.max(10,evt.clientY-rect.height-10);
+  popup.style.position='fixed';
+  popup.style.left=x+'px';
+  popup.style.top=y+'px';
+}
+function closeInfoPopup(){document.getElementById('infoPopup').style.display='none';}
+document.addEventListener('click',e=>{
+  const popup=document.getElementById('infoPopup');
+  if(popup&&popup.style.display==='block'&&!popup.contains(e.target)&&!e.target.closest('.powerup-chip')&&!e.target.closest('.inv-chip')){
+    popup.style.display='none';
+  }
+});
+
+const BUFF_DESCRIPTIONS={
+  'SHIELDED':'Next defeat penalty is fully absorbed. One-time protection.',
+  'EMP READY':'Next enemy has -30% effective power in combat.',
+  'OVERDRIVE':'+15 Power Level permanently.',
+  'TRAUMA KIT':'Restored 40 integrity.',
+  'SCAVENGE':'+80 credits found.',
+  'HARDENED':'Next loss penalty absorbed by shield.',
+  'LUCKY SPIN':'Win odds +15% for next fight.',
+  'LUCKY':'Bonus win chance on next combat roulette.',
+  'OVERCLOCK':'Temporary power boost active for next combat.',
+  'ADRENALINE':'+10 Power, +20 integrity.',
+};
+
+// ═══════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════
+const rng=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+const weaponById=id=>WEAPONS.find(w=>w.id===id)||WEAPONS[0];
+const equippedWeapon=()=>weaponById(G.equippedWeapon);
+
+function screenDamage(){
+  const el=document.getElementById('dmgOverlay');
+  if(!el)return;
+  el.classList.remove('active');
+  void el.offsetWidth; // force reflow to restart animation
+  el.classList.add('active');
+  el.addEventListener('animationend',()=>el.classList.remove('active'),{once:true});
+}
+
+function addLog(msg,cls=''){
+  const wrap=document.getElementById('logWrap');
+  const d=document.createElement('div');
+  d.className='log-line '+(cls||'');
+  d.textContent='> '+msg;
+  wrap.appendChild(d);
+  wrap.scrollTop=wrap.scrollHeight;
+}
+
+function updateHUD(){
+  const hpPct=(G.hp/G.maxHp)*100;
+  const plPct=Math.min(100,(G.powerLevel/100)*100);
+  const hpColor=hpPct>60?'var(--green)':hpPct>30?'var(--yellow)':'var(--red)';
+  document.getElementById('hpVal').textContent=G.hp;
+  document.getElementById('hpVal').style.color=hpColor;
+  document.getElementById('hpBar').style.width=hpPct+'%';
+  document.getElementById('hpBar').style.background=hpColor;
+  const totalPl=G.powerLevel+(G.tempPower||0);
+  document.getElementById('plVal').textContent=G.tempPower>0?`${G.powerLevel}+${G.tempPower}`:G.powerLevel;
+  document.getElementById('plBar').style.width=Math.min(100,(totalPl/100)*100)+'%';
+  document.getElementById('plBar').style.background=totalPl>=40?'var(--green)':totalPl>=20?'var(--yellow)':'var(--accent)';
+  document.getElementById('credVal').textContent=G.credits;
+  // header info
+  const lvlEl=document.getElementById('playerLvl');
+  if(lvlEl) lvlEl.textContent=playerLevel;
+  const diffEl=document.getElementById('headerDiff');
+  const diff=DIFFICULTIES[G.difficulty]||DIFFICULTIES.normal;
+  if(diffEl) diffEl.innerHTML=`<span style="color:${diff.color}">${diff.label}</span>${G.ngPlusLevel>0?' // <span style="color:var(--purple)">NG+'+G.ngPlusLevel+'</span>':''}`;
+  const w=equippedWeapon();
+  document.getElementById('weaponVal').textContent=w.icon+' '+w.name;
+  document.getElementById('weaponVal').style.color=w.tier==='NONE'?'var(--text3)':w.tier==='TIER I'?'var(--text)':w.tier==='TIER II'?'var(--green)':w.tier==='TIER III'?'var(--accent)':'var(--yellow)';
+
+  // buff chips
+  const pl=document.getElementById('powerupList');
+  const buffs=[];
+  if(G.shielded)buffs.push('SHIELDED');
+  if(G.luckyBonus>0)buffs.push(`LUCKY +${G.luckyBonus}%`);
+  if(G.empActive)buffs.push('EMP READY');
+  if(G.tempPower>0)buffs.push(`OVERCLOCK +${G.tempPower}`);
+  // Only skip powerups already represented by explicit state checks above
+  const dupeNames=[];
+  if(G.luckyBonus>0)dupeNames.push('LUCKY SPIN');
+  if(G.shielded)dupeNames.push('HARDENED');
+  G.activePowerups.forEach(p=>{
+    if(dupeNames.includes(p))return;
+    buffs.push(p);
+  });
+  // Queued items show as pending buffs
+  const queuedBuffs=[];
+  Object.entries(itemQueue).forEach(([id,count])=>{
+    if(count<=0)return;
+    const c=CONSUMABLES.find(x=>x.id===id);
+    if(!c)return;
+    for(let i=0;i<count;i++) queuedBuffs.push({name:`${c.icon} ${c.name}`,desc:c.effect,queued:true});
+  });
+
+  const allBuffs=[...buffs.map(p=>{
+    const descKey=p.startsWith('LUCKY')?'LUCKY':p.startsWith('OVERCLOCK')?'OVERCLOCK':p;
+    const desc=BUFF_DESCRIPTIONS[descKey]||BUFF_DESCRIPTIONS[p]||'Active buff.';
+    return {name:p,desc,queued:false};
+  }),...queuedBuffs];
+
+  if(allBuffs.length===0){pl.innerHTML='<span style="font-size:9px;color:var(--text3)">NONE</span>'}
+  else{pl.innerHTML=allBuffs.map(b=>{
+    const safeDesc=b.desc.replace(/'/g,'&#39;');
+    const safeName=b.name.replace(/'/g,'&#39;');
+    return `<span class="powerup-chip${b.queued?' queued':''}" onclick="showInfoPopup('${safeName}','${safeDesc}',event)">${b.name}${b.queued?' <span style="font-size:8px;letter-spacing:1px">QUEUED</span>':''}</span>`;
+  }).join('')}
+
+  // inventory strip (display only — click for info, subtract queued amounts)
+  const inv=document.getElementById('inventoryStrip');
+  const items=Object.entries(G.inventory).filter(([,q])=>q>0);
+  if(items.length===0&&queuedBuffs.length===0){inv.innerHTML='<span style="font-size:9px;color:var(--text3)">EMPTY</span>';}
+  else{
+    inv.innerHTML=items.map(([id,qty])=>{
+      const c=CONSUMABLES.find(x=>x.id===id);
+      if(!c)return'';
+      const queued=itemQueue[id]||0;
+      const available=qty-queued;
+      if(available<=0)return'';
+      const safeName=c.name.replace(/'/g,'&#39;');
+      const safeEffect=c.effect.replace(/'/g,'&#39;');
+      return `<span class="inv-chip" onclick="showInfoPopup('${safeName}','${safeEffect}',event)">${c.icon} ${c.name} <span style="font-family:Orbitron,monospace;font-size:10px;color:var(--yellow)">×${available}</span></span>`;
+    }).join('')||'<span style="font-size:9px;color:var(--text3)">EMPTY</span>';
+  }
+}
+
+function renderMap(){
+  const mn=document.getElementById('mapNodes');
+  mn.innerHTML='';
+  for(let i=0;i<DUNGEON_LENGTH;i++){
+    if(i>0){const c=document.createElement('div');c.className='map-connector'+(i<=G.position?' visited':'');mn.appendChild(c);}
+    const n=document.createElement('div');
+    const isBase=i===0, isCheck=CHECKPOINTS.includes(i)&&i>0, isBoss=i===BOSS_NODE;
+    const visited=i<G.position, isCurrent=i===G.position;
+    n.className='map-node'+(visited?' visited':'')+(isCurrent?' current':'')+(isBase?' basecamp':'')+(isCheck&&!isBase?' checkpoint':'')+(isBoss?' boss-node':'');
+    n.innerHTML=isBase?'🏠':isBoss?'💀':isCheck?'📡':visited?'✓':i===G.position?'●':'·';
+    const lbl=document.createElement('div');
+    lbl.className='node-num';
+    lbl.textContent=isBase?'BASE':isBoss?'BOSS':isCheck?'POST':i;
+    n.appendChild(lbl);
+    mn.appendChild(n);
+  }
+}
+
+function setScreen(title,bodyHTML){
+  document.getElementById('screenTitle').textContent=title;
+  document.getElementById('screenBody').innerHTML=bodyHTML;
+}
+
+// ═══════════════════════════════════════════
+// SHOP
+// ═══════════════════════════════════════════
+function renderShop(isOutpost=false, tab='weapons'){
+  if(G.phase!=='shop') G.shopBought={};
+  G.phase='shop';
+  const locName=isOutpost?`OUTPOST — SECTOR ${G.position}`:'BASECAMP';
+  const locIcon=isOutpost?'📡':'🏠';
+  updateHUD();renderMap();
+
+  let html=`<div class="notice">${locIcon} <strong style="color:var(--accent)">${locName}</strong> — Buy weapons and single-use consumables. Items activate from your inventory bar at any time.</div>`;
+  html+=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <div class="shop-tabs">
+      <button class="shop-tab${tab==='weapons'?' active':''}" onclick="renderShop(${isOutpost},'weapons')">⚔ WEAPONS</button>
+      <button class="shop-tab${tab==='items'?' active':''}" onclick="renderShop(${isOutpost},'items')">🧪 CONSUMABLES</button>
+    </div>
+    <div style="font-size:10px;color:var(--yellow)">◈ ${G.credits} CREDITS</div>
+  </div>`;
+
+  if(tab==='weapons'){
+    html+=`<div class="shop-grid">`;
+    WEAPONS.forEach(w=>{
+      const owned=G.ownedWeapons.includes(w.id);
+      const equipped=G.equippedWeapon===w.id;
+      const canBuy=!owned&&G.credits>=w.price;
+      const tierColor=w.tier==='NONE'?'var(--text3)':w.tier==='TIER I'?'var(--text)':w.tier==='TIER II'?'var(--green)':w.tier==='TIER III'?'var(--accent)':'var(--yellow)';
+      html+=`<div class="weapon-card${owned?' owned':''}${equipped?' equipped':''}">
+        ${equipped?`<div class="equip-badge">EQUIPPED</div>`:owned?`<div class="owned-badge">OWNED</div>`:''}
+        <div style="font-size:24px;margin-bottom:6px">${w.icon}</div>
+        <div class="weapon-name">${w.name}</div>
+        <div class="weapon-tier" style="color:${tierColor}">${w.tier}</div>
+        <div class="weapon-stats"><div class="weapon-stat">PWR <span>+${w.power}</span></div></div>
+        <div class="weapon-desc">${w.desc}</div>
+        ${owned
+          ?(equipped?`<button class="btn" disabled>EQUIPPED</button>`:`<button class="btn btn-green" onclick="equipWeapon('${w.id}')">EQUIP</button>`)
+          :`<div class="weapon-price">◈ ${w.price} <button class="btn ${canBuy?'btn-accent':''}" ${canBuy?'':'disabled'} onclick="buyWeapon('${w.id}')">BUY</button></div>`
+        }
+      </div>`;
+    });
+    html+=`</div>`;
+  } else {
+    // Consumables tab
+    const typeColors={MEDICAL:'var(--green)',COMBAT:'var(--red)',DEFENSE:'var(--blue)',TACTICAL:'var(--yellow)',UTILITY:'var(--accent2)',UPGRADE:'var(--purple)'};
+    html+=`<div style="font-size:9px;color:var(--text3);letter-spacing:2px;margin-bottom:10px">SINGLE-USE ITEMS — ACTIVATE FROM INVENTORY BAR AT ANY TIME</div>`;
+    html+=`<div class="shop-grid">`;
+    [...CONSUMABLES].sort((a,b)=>a.price-b.price).forEach(c=>{
+      const qty=G.inventory[c.id]||0;
+      const atMax=qty>=c.maxStack;
+      const diff=DIFFICULTIES[G.difficulty]||DIFFICULTIES.normal;
+      const ngShopMult=Math.pow(0.85,G.ngPlusLevel);
+      const effectiveShopLimit=c.shopLimit?Math.max(1,Math.floor(c.shopLimit*diff.shopLimitMult*ngShopMult)):0;
+      const shopSoldOut=effectiveShopLimit&&(G.shopBought[c.id]||0)>=effectiveShopLimit;
+      const canBuy=G.credits>=c.price&&!atMax&&!shopSoldOut;
+      const tcolor=typeColors[c.type]||'var(--purple)';
+      const btnLabel=atMax?'FULL':shopSoldOut?'SOLD OUT':'BUY';
+      html+=`<div class="item-card${atMax||shopSoldOut?' depleted':''}">
+        ${qty>0?`<div class="item-qty-badge">×${qty} / ${c.maxStack}</div>`:''}
+        <div style="font-size:22px;margin-bottom:6px">${c.icon}</div>
+        <div class="item-name">${c.name}</div>
+        <div class="item-type" style="color:${tcolor}">${c.type} — SINGLE USE</div>
+        <div class="item-desc">${c.desc}</div>
+        <div class="item-effect">${c.effect}</div>
+        <div class="item-price">◈ ${c.price}
+          <button class="btn ${canBuy?'btn-accent btn-purple':''}" style="${canBuy?'border-color:var(--purple);color:var(--purple)':''}" ${canBuy?'':'disabled'} onclick="buyItem('${c.id}')">
+            ${btnLabel}
+          </button>
+        </div>
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+
+  html+=`<div class="btn-row" style="margin-top:20px">
+    <button class="btn btn-accent" onclick="deployFromBase()">DEPLOY TO DUNGEON →</button>
+  </div>`;
+
+  setScreen(`// ${locName} — ARMORY`, html);
+}
+
+function buyWeapon(id){
+  const w=WEAPONS.find(x=>x.id===id);
+  if(!w||G.credits<w.price)return;
+  G.credits-=w.price;
+  G.ownedWeapons.push(w.id);
+  G.equippedWeapon=w.id;
+  addLog(`Purchased ${w.name}. Equipped automatically.`,'good');
+  renderShop(G.position>0,'weapons');
+}
+
+function equipWeapon(id){
+  G.equippedWeapon=id;
+  const w=WEAPONS.find(x=>x.id===id);
+  addLog(`Equipped ${w.name}. Power Level bonus: +${w.power}`,'info');
+  renderShop(G.position>0,'weapons');
+}
+
+function buyItem(id){
+  const c=CONSUMABLES.find(x=>x.id===id);
+  if(!c||G.credits<c.price)return;
+  const qty=G.inventory[id]||0;
+  if(qty>=c.maxStack){addLog(`${c.name} already at max stack.`,'warn');return;}
+  if(c.shopLimit){
+    const diff=DIFFICULTIES[G.difficulty]||DIFFICULTIES.normal;
+    const ngShopMult=Math.pow(0.85,G.ngPlusLevel);
+    const effectiveLimit=Math.max(1,Math.floor(c.shopLimit*diff.shopLimitMult*ngShopMult));
+    const bought=G.shopBought[id]||0;
+    if(bought>=effectiveLimit){addLog(`${c.name} — shop limit reached. Try the next outpost.`,'warn');return;}
+    G.shopBought[id]=bought+1;
+  }
+  G.credits-=c.price;
+  G.inventory[id]=(qty+1);
+  addLog(`Purchased ${c.name} ×1. Now carrying ×${G.inventory[id]}.`,'good');
+  updateHUD();
+  renderShop(G.position>0,'items');
+}
+
+// itemQueue: {id -> count} of how many the player has queued to use this fight
+// Applied all at once when spin begins
+let itemQueue={};
+
+function queueItem(id, delta){
+  const c=CONSUMABLES.find(x=>x.id===id);
+  if(!c)return;
+  if(c.timing==='combat'&&G.phase!=='combat'){addLog(`${c.name} can only be used in combat.`,'warn');return;}
+  const owned=G.inventory[id]||0;
+  const current=itemQueue[id]||0;
+  const next=Math.max(0,Math.min(owned,current+delta));
+  itemQueue[id]=next;
+  renderCombat();
+}
+
+function applyItemQueue(){
+  let anyUsed=false;
+  Object.entries(itemQueue).forEach(([id,count])=>{
+    if(count<=0)return;
+    const c=CONSUMABLES.find(x=>x.id===id);
+    if(!c)return;
+    for(let i=0;i<count;i++){
+      const qty=G.inventory[id]||0;
+      if(qty<=0)break;
+      G.inventory[id]=qty-1;
+      const msg=c.apply(G);
+      addLog(msg||`Used ${c.name}.`,'good');
+      anyUsed=true;
+    }
+  });
+  itemQueue={};
+  if(anyUsed)updateHUD();
+}
+
+function useItem(id){
+  // Legacy path from non-combat inventory strip — still works outside combat
+  const c=CONSUMABLES.find(x=>x.id===id);
+  if(!c)return;
+  const qty=G.inventory[id]||0;
+  if(qty<=0){addLog(`No ${c.name} in inventory.`,'warn');return;}
+  if(c.timing==='combat'&&G.phase!=='combat'&&G.phase!=='spin'){
+    addLog(`${c.name} can only be used before a fight.`,'warn');return;
+  }
+  G.inventory[id]=qty-1;
+  const msg=c.apply(G);
+  addLog(msg||`Used ${c.name}.`,'good');
+  updateHUD();
+  if(G.phase==='combat')renderCombat();
+}
+
+function deployFromBase(){
+  if(G.position===0&&G.position<DUNGEON_LENGTH-1){
+    G.position=1;
+  }
+  renderNav();
+}
+
+// ═══════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════
+function renderNav(){
+  G.phase='nav';
+  updateHUD();renderMap();
+
+  if(G.position>=DUNGEON_LENGTH){renderWin();return;}
+
+  // Build 3 mystery rooms
+  const rooms=buildRooms();
+  const labels=['ALPHA','BETA','GAMMA'];
+  let html=`<p style="font-size:10px;letter-spacing:2px;color:var(--text3);margin-bottom:16px">CHOOSE YOUR NEXT SECTOR — CONTENTS UNKNOWN. SECTOR ${G.position} / ${DUNGEON_LENGTH-1}</p>`;
+  html+=`<div class="rooms-grid">`;
+  rooms.forEach((r,i)=>{
+    html+=`<div class="room-card" onclick="enterRoom(${i})">
+      <span class="r-tag">SECTOR ${labels[i]}</span>
+      <span class="r-icon">?</span>
+      <span class="r-name" style="color:var(--text3)">[  UNKNOWN  ]</span>
+      <span class="r-enter">ENTER &gt;</span>
+    </div>`;
+  });
+  html+=`</div>`;
+
+  setScreen(`// NAVIGATION — FLOOR ${G.position}`,html);
+  // Store rooms in window temp
+  window._rooms=rooms;
+}
+
+function buildRooms(){
+  const pool=['combat','combat','combat','combat','rest','treasure','trap'];
+  const out=[];
+  for(let i=0;i<3;i++){
+    out.push(pool[rng(0,pool.length-1)]);
+  }
+  // Boss node always combat
+  if(G.position===BOSS_NODE)return['boss','boss','boss'];
+  return out;
+}
+
+function enterRoom(idx){
+  const type=window._rooms?window._rooms[idx]:'combat';
+  if(type==='rest'){
+    const missing=G.maxHp-G.hp;
+    const healPct=G.difficulty==='brutal'?0.25:G.difficulty==='hard'?0.5:0.75;
+    const heal=Math.round(missing*healPct);
+    G.hp=clamp(G.hp+heal,0,G.maxHp);
+    addLog(`Safe room found. Recovered ${heal} integrity (${Math.round(healPct*100)}%).`,'good');
+    updateHUD();
+    showEvent('SAFE ROOM',`+${heal} INTEGRITY RESTORED (${Math.round(healPct*100)}%)`,`🔧`,'var(--green)',()=>{G.position=clamp(G.position+1,0,DUNGEON_LENGTH-1);renderNav();});
+    return;
+  }
+  if(type==='treasure'){
+    const g=rng(20,60);
+    const pl=rng(2,8);
+    G.credits+=g;G.totalCredits+=g;
+    G.powerLevel=clamp(G.powerLevel+pl,0,100);
+    addLog(`Supply cache! +${g} credits, +${pl} power.`,'good');
+    updateHUD();
+    showEvent('SUPPLY CACHE',`+${g} CREDITS  +${pl} POWER LEVEL`,'📦','var(--yellow)',()=>{G.position=clamp(G.position+1,0,DUNGEON_LENGTH-1);renderNav();});
+    return;
+  }
+  if(type==='trap'){
+    if(G.shielded){
+      G.shielded=false;
+      addLog('Blast Shield absorbed the anomaly trap!','info');
+      updateHUD();
+      showEvent('ANOMALY TRAP',`BLAST SHIELD ABSORBED`,'🛡️','var(--blue)',()=>{G.position=clamp(G.position+1,0,DUNGEON_LENGTH-1);renderNav();});
+      return;
+    }
+    const dmg=rng(10,25);
+    G.hp=clamp(G.hp-dmg,0,G.maxHp);
+    screenDamage();
+    addLog(`Anomaly trap! -${dmg} integrity.`,'bad');
+    updateHUD();
+    if(G.hp<=0){renderDead();return;}
+    showEvent('ANOMALY TRAP',`-${dmg} INTEGRITY LOST`,'⚠️','var(--red)',()=>{G.position=clamp(G.position+1,0,DUNGEON_LENGTH-1);renderNav();});
+    return;
+  }
+  // combat / boss
+  spawnEnemy(type==='boss');
+}
+
+function showEvent(title,sub,icon,color,cb){
+  G.phase='event';
+  updateHUD();
+  setScreen('// SECTOR EVENT',`
+    <div class="endscreen" style="padding:30px 20px">
+      <div style="font-size:40px;margin-bottom:12px">${icon}</div>
+      <div class="end-title" style="font-size:22px;color:${color};letter-spacing:4px">${title}</div>
+      <div style="color:var(--text2);font-size:13px;letter-spacing:2px;margin:10px 0 24px">${sub}</div>
+      <button class="btn btn-accent" onclick="(${cb.toString()})()">CONTINUE →</button>
+    </div>`);
+}
+
+// ═══════════════════════════════════════════
+// COMBAT
+// ═══════════════════════════════════════════
+// Scale multiplier: power grows steeply toward end
+function zonePowerMult(pos){
+  // Increases non-linearly: 1.0 at zone 1, ~3.5 at zone 19
+  return 1.0 + (pos/19)*2.8;
+}
+
+function spawnEnemy(boss=false){
+  const pos=G.position;
+  const preCP=[3,4,8,9,13,14]; // sectors just before checkpoints
+  const isPreCheckpoint=preCP.includes(pos);
+
+  let pool;
+  if(pos===BOSS_NODE){
+    pool=ENEMIES.filter(e=>e.id==='darkstar');
+  } else if(boss){
+    pool=ENEMIES.filter(e=>e.tier==='BOSS');
+  } else if(isPreCheckpoint){
+    // Force miniboss OR high-tier enemy
+    pool=ENEMIES.filter(e=>(e.preCheckpoint||e.tier==='BOSS'||e.tier==='ELITE')&&pos>=e.minZone&&pos<=e.maxZone);
+    if(!pool.length) pool=ENEMIES.filter(e=>pos>=e.minZone&&pos<=e.maxZone);
+  } else {
+    pool=ENEMIES.filter(e=>!e.preCheckpoint&&pos>=e.minZone&&pos<=e.maxZone);
+    if(!pool.length) pool=ENEMIES.filter(e=>!e.preCheckpoint);
+  }
+
+  const base=pool[rng(0,pool.length-1)];
+  const mult=zonePowerMult(pos);
+  const diff=DIFFICULTIES[G.difficulty]||DIFFICULTIES.normal;
+  const ngMult=1.0+G.ngPlusLevel*0.15;
+  const scaledPower=Math.round(base.power*mult*diff.enemyMult*ngMult);
+
+  G.currentEnemy={
+    ...base,
+    credits:Math.round(rng(base.credits[0],base.credits[1])*diff.creditMult),
+    scaledPower,
+  };
+  addLog(`HOSTILE CONTACT: ${G.currentEnemy.name} [PWR: ${scaledPower}]`,'bad');
+  itemQueue={};
+  renderCombat();
+}
+
+function getWinChance(){
+  const w=equippedWeapon();
+  const myPower=G.powerLevel+(G.tempPower||0)+w.power;
+  const enemyPower=G.currentEnemy.scaledPower*(G.empActive?0.7:1);
+  const ratio=myPower/(myPower+enemyPower);
+  return clamp(Math.round(ratio*100)+(G.luckyBonus||0),10,88);
+}
+
+function renderCombat(){
+  G.phase='combat';
+  updateHUD();renderMap();
+  const e=G.currentEnemy;
+  const w=equippedWeapon();
+  const winChance=getWinChance();
+  const myPower=G.powerLevel+(G.tempPower||0)+w.power;
+  const tierColor=e.tier==='GRUNT'?'var(--green)':e.tier==='SOLDIER'?'var(--yellow)':e.tier==='MINIBOSS'?'var(--accent2)':e.tier==='ELITE'?'var(--accent)':'var(--red)';
+  const effectivePower=G.empActive?Math.round(e.scaledPower*0.7):e.scaledPower;
+
+  const activeBonuses=[];
+  if(G.tempPower>0)activeBonuses.push(`<span style="color:var(--teal)">⚡ +${G.tempPower} OVERCLOCK</span>`);
+  if(G.luckyBonus>0)activeBonuses.push(`<span style="color:var(--yellow)">🎰 +${G.luckyBonus}% LUCKY</span>`);
+  if(G.empActive)activeBonuses.push(`<span style="color:var(--blue)">💫 EMP: ENEMY -30%</span>`);
+
+  // inventory stepper rows
+  const invEntries=Object.entries(G.inventory).filter(([,qty])=>qty>0);
+  const invHtml=invEntries.map(([id,owned])=>{
+    const c=CONSUMABLES.find(x=>x.id===id);
+    if(!c)return'';
+    const queued=itemQueue[id]||0;
+    const canInc=queued<owned;
+    const canDec=queued>0;
+    return `<div class="item-stepper">
+      <span class="item-stepper-icon">${c.icon}</span>
+      <span class="item-stepper-name">${c.name}</span>
+      <div class="item-stepper-ctrl">
+        <button class="stepper-btn" onclick="queueItem('${id}',-1)" ${canDec?'':'disabled'}>−</button>
+        <span class="stepper-val" style="color:${queued>0?'var(--teal)':'var(--blue)'}">${queued}</span>
+        <button class="stepper-btn" onclick="queueItem('${id}',1)" ${canInc?'':'disabled'}>+</button>
+      </div>
+      <span class="item-stepper-stock">×${owned}</span>
+    </div>`;
+  }).join('');
+
+  let html=`
+  <div class="combat-header fade-in">
+    <div class="combatant">
+      <div class="hud-label">RUNNER</div>
+      <div class="combatant-name" style="color:var(--blue)">YOU</div>
+      <span class="combatant-art">${w.icon}</span>
+      <div class="power-display">
+        <span class="power-icon">⚡</span>
+        <span class="power-val" style="color:var(--blue)">${myPower}</span>
+        <span class="power-label">POWER</span>
+      </div>
+      <div style="font-size:9px;color:var(--text3);margin-top:6px;line-height:1.6">
+        BASE <span style="color:var(--text)">${G.powerLevel}${G.tempPower>0?`+${G.tempPower}`:''}</span>
+        + ${w.icon} <span style="color:var(--text)">${w.name} +${w.power}</span>
+      </div>
+      <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px">
+        <div style="font-size:8px;letter-spacing:2px;color:var(--text3);margin-bottom:6px">ITEMS TO USE</div>
+        ${invHtml||`<div style="font-size:9px;color:var(--text3)">NO ITEMS</div>`}
+      </div>
+    </div>
+    <div class="vs-badge">VS</div>
+    <div class="combatant">
+      <div class="hud-label">HOSTILE</div>
+      <div class="combatant-name" style="color:${tierColor}">${e.name}</div>
+      <span class="combatant-art">${e.icon}</span>
+      <div class="power-display">
+        <span class="power-icon">⚡</span>
+        <span class="power-val" style="color:${tierColor}">${effectivePower}${G.empActive?`<span style="font-size:10px;color:var(--blue)"> ↓EMP</span>`:''}</span>
+        <span class="power-label">POWER</span>
+      </div>
+    </div>
+  </div>
+  <div style="background:var(--bg3);border:1px solid var(--border);padding:12px 14px;margin-bottom:10px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <span style="font-size:9px;letter-spacing:3px;color:var(--text3)">COMBAT ODDS</span>
+      <span style="font-family:Orbitron,monospace;font-size:14px;color:${winChance>=50?'var(--green)':'var(--red)'}">${winChance}% WIN</span>
+    </div>
+    <div style="height:8px;background:var(--bg);overflow:hidden">
+      <div style="height:100%;width:${winChance}%;background:${winChance>=50?'var(--green)':'var(--red)'};transition:width 0.5s"></div>
+    </div>
+    ${activeBonuses.length?`<div style="font-size:9px;margin-top:8px;display:flex;gap:12px;flex-wrap:wrap">${activeBonuses.join('')}</div>`:''}
+    <div style="font-size:9px;color:var(--text3);margin-top:6px">${e.desc}</div>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-accent" onclick="startCombatSpin()">⚡ ENGAGE ROULETTE</button>
+    ${G.tutorialDone!==false?'<button class="btn btn-red" onclick="startRetreatSpin()">↩ RETREAT</button>':''}
+  </div>`;
+
+  setScreen(G.tutorialDone===false?`// ROOK ENCOUNTER ${G.tutorialEncounters+1}/2`:`// COMBAT ENCOUNTER — SECTOR ${G.position}`, html);
+}
+
+// ═══════════════════════════════════════════
+// ROULETTE ENGINE
+// ═══════════════════════════════════════════
+function startCombatSpin(){
+  applyItemQueue();
+  G.spinType='combat';
+  G.lastItemUse=null;
+  renderSpinScreen();
+}
+function startRetreatSpin(){
+  itemQueue={};
+  G.spinType='retreat';
+  G.lastItemUse=null;
+  addLog('Retreat initiated — taking penalty damage...','warn');
+  renderSpinScreen();
+}
+
+function buildCombatSegments(){
+  const winChance=getWinChance();
+  const e=G.currentEnemy;
+  const plGain=rng(5,12);
+  const creditGain=e.credits;
+  const pu=POWERUPS_COMBAT[rng(0,POWERUPS_COMBAT.length-1)];
+  const winSegs=Math.max(1,Math.min(10,Math.round(12*winChance/100)));
+  const loseSegs=12-winSegs;
+  const segs=[];
+  const winPool=[
+    {icon:'◈',label:`+${creditGain}CR`,sub:'CREDITS',color:'#0d2518',stroke:'#2de08a',outcome:'credits',value:creditGain},
+    {icon:'⚡',label:`+${plGain} PWR`,sub:'POWER',color:'#0a1a10',stroke:'#2de08a',outcome:'power',value:plGain},
+    {icon:'⭐',label:'POWER UP',sub:'BONUS',color:'#1a0d2e',stroke:'#a04ae8',outcome:'powerup',pu},
+    ...(G.tutorialDone!==false?[{icon:'→',label:'+4 SECTORS',sub:'ADVANCE',color:'#0d1a2e',stroke:'#3a8ae8',outcome:'advance'}]:[]),
+    {icon:'◈',label:`+${creditGain}CR`,sub:'CREDITS',color:'#0d2518',stroke:'#2de08a',outcome:'credits',value:creditGain},
+    {icon:'⚡',label:`+${plGain} PWR`,sub:'POWER',color:'#0a1a10',stroke:'#2de08a',outcome:'power',value:plGain},
+  ];
+  // Loss pool — all map to 'loseint' to trigger the separate defeat roulette
+  const losePool=[
+    {icon:'✗',label:'DEFEAT',sub:'PENALTY',color:'#2e0d0d',stroke:'#e83a3a',outcome:'loseint'},
+    {icon:'✗',label:'DEFEAT',sub:'PENALTY',color:'#2e0d0d',stroke:'#e83a3a',outcome:'loseint'},
+    {icon:'✗',label:'DEFEAT',sub:'PENALTY',color:'#2e0d0d',stroke:'#e83a3a',outcome:'loseint'},
+    {icon:'✗',label:'DEFEAT',sub:'PENALTY',color:'#2e0d0d',stroke:'#e83a3a',outcome:'loseint'},
+    {icon:'✗',label:'DEFEAT',sub:'PENALTY',color:'#2e0d0d',stroke:'#e83a3a',outcome:'loseint'},
+    {icon:'✗',label:'DEFEAT',sub:'PENALTY',color:'#2e0d0d',stroke:'#e83a3a',outcome:'loseint'},
+  ];
+  for(let i=0;i<winSegs;i++) segs.push(winPool[i%winPool.length]);
+  for(let i=0;i<loseSegs;i++) segs.push(losePool[i%losePool.length]);
+  for(let i=segs.length-1;i>0;i--){const j=rng(0,i);[segs[i],segs[j]]=[segs[j],segs[i]];}
+  return segs;
+}
+
+function clearCombatBuffs(){
+  G.tempPower=0;
+  G.luckyBonus=0;
+  G.empActive=false;
+}
+
+function buildRetreatSegments(){
+  const entries=[
+    {icon:'💔',label:'-5 INT', sub:'GRAZE',    color:'#141208',stroke:'#e8c53a',outcome:'retreatdmg',value:5},
+    {icon:'💔',label:'-8 INT', sub:'MINOR',    color:'#1c1408',stroke:'#e8c53a',outcome:'retreatdmg',value:8},
+    {icon:'💔',label:'-5 INT', sub:'GRAZE',    color:'#141208',stroke:'#e8c53a',outcome:'retreatdmg',value:5},
+    {icon:'💔',label:'-10 INT',sub:'HURT',     color:'#2a1208',stroke:'#e8632a',outcome:'retreatdmg',value:10},
+    {icon:'💔',label:'-6 INT', sub:'MINOR',    color:'#1c1408',stroke:'#e8c53a',outcome:'retreatdmg',value:6},
+    {icon:'💔',label:'-12 INT',sub:'MODERATE', color:'#2a1208',stroke:'#e8632a',outcome:'retreatdmg',value:12},
+    {icon:'💔',label:'-5 INT', sub:'GRAZE',    color:'#141208',stroke:'#e8c53a',outcome:'retreatdmg',value:5},
+    {icon:'💀',label:'-15 INT',sub:'HEAVY',    color:'#2e0d0d',stroke:'#e83a3a',outcome:'retreatdmg',value:15},
+    {icon:'💔',label:'-8 INT', sub:'MINOR',    color:'#1c1408',stroke:'#e8c53a',outcome:'retreatdmg',value:8},
+    {icon:'💔',label:'-10 INT',sub:'HURT',     color:'#2a1208',stroke:'#e8632a',outcome:'retreatdmg',value:10},
+  ];
+  for(let i=entries.length-1;i>0;i--){const j=rng(0,i);[entries[i],entries[j]]=[entries[j],entries[i]];}
+  return entries;
+}
+
+function buildLossSegments(){
+  const isRook=G.tutorialDone===false;
+  const plLose=isRook?rng(3,6):rng(10,22);
+  const credLose=isRook?rng(5,15):rng(35,75);
+  const intLose=isRook?rng(5,12):rng(25,45);
+
+  // Light penalties (yellow)
+  const light=[
+    {icon:'💔',label:`-${intLose} INT`,  sub:'INTEGRITY', color:'#141208',stroke:'#e8c53a',outcome:'loseint',  value:intLose},
+    {icon:'⚡',label:`-${plLose} PWR`,    sub:'POWER',     color:'#141208',stroke:'#e8c53a',outcome:'losepower',value:plLose},
+    {icon:'◈', label:`-${credLose}CR`,    sub:'CREDITS',   color:'#1c1408',stroke:'#e8c53a',outcome:'losecreds',value:credLose},
+    {icon:'💔',label:`-${intLose} INT`,   sub:'INTEGRITY', color:'#1c1408',stroke:'#e8c53a',outcome:'loseint',  value:intLose},
+    {icon:'⚡',label:`-${plLose} PWR`,    sub:'POWER',     color:'#141208',stroke:'#e8c53a',outcome:'losepower',value:plLose},
+  ];
+  // Medium penalties (orange)
+  const medIntLose=isRook?rng(10,18):credLose+25;
+  const medium=[
+    {icon:'📡',label:'CHECKPOINT',        sub:'SET BACK',  color:'#2a1208',stroke:'#e8632a',outcome:'checkpoint'},
+    {icon:'◈', label:`-${isRook?rng(12,22):credLose+25}CR`, sub:'CREDITS',   color:'#2a1208',stroke:'#e8632a',outcome:'losecreds',value:isRook?rng(12,22):credLose+25},
+    {icon:'📡',label:'CHECKPOINT',        sub:'SET BACK',  color:'#2a1208',stroke:'#e8632a',outcome:'checkpoint'},
+  ];
+  // Heavy penalties (red)
+  const heavyInt=isRook?rng(15,25):Math.round(intLose*1.4);
+  const heavyPl=isRook?rng(6,10):plLose+8;
+  const heavy=[
+    {icon:'💔',label:`-${heavyInt} INT`, sub:'INTEGRITY', color:'#2e0d0d',stroke:'#e83a3a',outcome:'loseint',  value:heavyInt},
+    {icon:'⚡',label:`-${heavyPl} PWR`,  sub:'POWER',     color:'#2e0d0d',stroke:'#e83a3a',outcome:'losepower',value:heavyPl},
+  ];
+
+  let entries;
+  if(G.tutorialDone===false){
+    // Rook deployment: scale by difficulty
+    if(G.difficulty==='brutal') entries=[...light,...medium,...heavy];
+    else if(G.difficulty==='hard') entries=[...light,...medium];
+    else entries=[...light];
+  } else {
+    entries=[...light,...medium,...heavy];
+  }
+
+  // Pad to 10 segments by repeating
+  while(entries.length<10) entries.push(entries[entries.length%entries.length]);
+  entries=entries.slice(0,10);
+  for(let i=entries.length-1;i>0;i--){const j=rng(0,i);[entries[i],entries[j]]=[entries[j],entries[i]];}
+  return entries;
+}
+
+let _spinSegs=[];
+let _spinRafId=null;
+
+function renderSpinScreen(){
+  G.phase='spin';
+  const isCombat=G.spinType==='combat';
+  const isLoss=G.spinType==='loss';
+  const isRetreat=G.spinType==='retreat';
+
+  if(isCombat) _spinSegs=buildCombatSegments();
+  else if(isLoss) _spinSegs=buildLossSegments();
+  else _spinSegs=buildRetreatSegments();
+
+  const winChance=isCombat?getWinChance():null;
+  let titleStr, subStr;
+  if(isCombat){
+    titleStr='COMBAT ROULETTE';
+    subStr=`WIN CHANCE: <span style="color:${winChance>=50?'var(--green)':'var(--red)'};font-family:Orbitron,monospace">${winChance}%</span> — POWER DETERMINES ODDS`;
+  } else if(isLoss){
+    titleStr='DEFEAT PENALTY';
+    subStr='YOU LOST THE ENGAGEMENT — SPIN FOR YOUR PUNISHMENT';
+  } else {
+    titleStr='RETREAT PENALTY';
+    subStr='FLEEING THE FIELD — TAKE YOUR DAMAGE';
+  }
+
+  setScreen(isCombat?'// COMBAT ROULETTE':isLoss?'// DEFEAT — PENALTY ROULETTE':'// RETREAT PENALTY',`
+    <div class="roulette-container fade-in">
+      <div class="spin-info">
+        <div class="spin-title">${titleStr}</div>
+        <div class="spin-sub">${subStr}</div>
+      </div>
+      <div class="roulette-stage" id="rouletteStage">
+        <div class="roulette-pointer-top"></div>
+        <div class="roulette-pointer-bot"></div>
+        <div class="roulette-fade-l"></div>
+        <div class="roulette-fade-r"></div>
+        <div class="roulette-center-hl"></div>
+        <div class="roulette-belt" id="rouletteBelt"></div>
+      </div>
+      <button class="btn btn-accent" id="spinBtn" onclick="doSpin()" style="font-size:13px;letter-spacing:5px;padding:13px 40px">◎ SPIN</button>
+      <div id="spinResult" style="min-height:70px;width:100%;max-width:400px;text-align:center"></div>
+    </div>`);
+}
+
+function buildBelt(numCopies){
+  const belt=document.getElementById('rouletteBelt');
+  if(!belt)return;
+  belt.innerHTML='';
+  for(let c=0;c<numCopies;c++){
+    _spinSegs.forEach(seg=>{
+      const cell=document.createElement('div');
+      cell.className='roulette-cell';
+      cell.style.cssText=`background:${seg.color};border-right-color:${seg.stroke}44`;
+      cell.innerHTML=`<div class="roulette-cell-icon">${seg.icon}</div>
+        <div class="roulette-cell-label" style="color:${seg.stroke}">${seg.label}</div>
+        <div class="roulette-cell-sub">${seg.sub||''}</div>`;
+      belt.appendChild(cell);
+    });
+  }
+  belt.style.transform='translateX(0)';
+}
+
+function doSpin(){
+  if(G.spinning)return;
+  G.spinning=true;
+  const btn=document.getElementById('spinBtn');
+  if(btn)btn.disabled=true;
+
+  const cellW=96;
+  const n=_spinSegs.length;
+  // We spin through copies 0..(COPIES-2), landing on the final copy (COPIES-1) at finalIdx
+  // This guarantees we always have cells to show during the whole animation
+  const COPIES=16; // plenty of runway
+  buildBelt(COPIES);
+
+  const finalIdx=rng(0,n-1);
+  // Land exactly at: copy (COPIES-2), cell finalIdx — leaving one full copy as tail buffer
+  const landingCopyStart=(COPIES-2)*n*cellW;
+  const landingOffset=finalIdx*cellW;
+
+  // Center the landed cell in the stage viewport
+  const stage=document.getElementById('rouletteStage');
+  const stageW=stage?stage.offsetWidth:600;
+  const centerAdj=Math.floor(stageW/2)-Math.floor(cellW/2);
+
+  const targetX=-(landingCopyStart+landingOffset)+centerAdj;
+
+  let startTime=null;
+  const dur=rng(2800,3600);
+
+  // Use cubic ease-out: starts fast, decelerates smoothly
+  function easeOut(t){return 1-Math.pow(1-t,3);}
+
+  function frame(ts){
+    if(!startTime)startTime=ts;
+    const t=Math.min((ts-startTime)/dur,1);
+    const x=easeOut(t)*targetX;
+    const belt=document.getElementById('rouletteBelt');
+    if(belt)belt.style.transform=`translateX(${x}px)`;
+    if(t<1){
+      _spinRafId=requestAnimationFrame(frame);
+    } else {
+      G.spinning=false;
+      // Highlight landed cell
+      const belt2=document.getElementById('rouletteBelt');
+      if(belt2){
+        const cells=belt2.querySelectorAll('.roulette-cell');
+        const landedAbsIdx=(COPIES-2)*n+finalIdx;
+        if(cells[landedAbsIdx]){
+          cells[landedAbsIdx].style.background=_spinSegs[finalIdx].stroke+'30';
+          cells[landedAbsIdx].style.outline=`2px solid ${_spinSegs[finalIdx].stroke}`;
+          cells[landedAbsIdx].style.boxShadow=`0 0 18px ${_spinSegs[finalIdx].stroke}66 inset`;
+        }
+      }
+      setTimeout(()=>resolveOutcome(finalIdx),350);
+    }
+  }
+  _spinRafId=requestAnimationFrame(frame);
+}
+
+function resolveOutcome(idx){
+  const seg=_spinSegs[idx];
+  const e=G.currentEnemy;
+
+  if(G.spinType==='retreat'){
+    if(G.shielded){
+      G.shielded=false;
+      addLog('Blast Shield absorbed retreat damage!','info');
+      clearCombatBuffs();
+      updateHUD();
+      const res=document.getElementById('spinResult');
+      if(res) res.innerHTML=`<div class="result-splash">
+        <div class="result-big" style="color:var(--blue)">SHIELDED</div>
+        <div class="result-sub">BLAST SHIELD ABSORBED RETREAT DAMAGE</div>
+        <div class="btn-row" style="justify-content:center;margin-top:14px">
+          <button class="btn btn-accent" onclick="afterRetreat()">CONTINUE →</button>
+        </div>
+      </div>`;
+      return;
+    }
+    const dmg=seg.value;
+    G.hp=clamp(G.hp-dmg,0,G.maxHp);
+    screenDamage();
+    addLog(`Retreat: took ${dmg} integrity damage while fleeing.`,'bad');
+    clearCombatBuffs();
+    updateHUD();
+    const res=document.getElementById('spinResult');
+    if(res) res.innerHTML=`<div class="result-splash">
+      <div class="result-big" style="color:var(--red)">-${dmg}</div>
+      <div class="result-sub">INTEGRITY — RETREATED</div>
+      <div class="btn-row" style="justify-content:center;margin-top:14px">
+        ${G.hp>0?'<button class="btn btn-accent" onclick="afterRetreat()">CONTINUE →</button>':''}
+      </div>
+    </div>`;
+    if(G.hp<=0)setTimeout(renderDead,1000);
+    return;
+  }
+
+  if(G.spinType==='loss'){
+    // Defeat penalty roulette
+    const shielded=G.shielded;
+    G.shielded=false;
+    clearCombatBuffs();
+    const out=seg.outcome;
+    let bigText, bigColor, subText;
+
+    if(shielded){
+      bigText='SHIELDED';bigColor='var(--blue)';subText='BLAST SHIELD ABSORBED PENALTY';
+      addLog('Blast Shield absorbed the defeat penalty!','info');
+    } else if(out==='loseint'){
+      const v=seg.value;
+      G.hp=clamp(G.hp-v,0,G.maxHp);
+      screenDamage();
+      bigText=`-${v} INT`;bigColor='var(--red)';subText='INTEGRITY DAMAGE';
+      addLog(`Defeat penalty: -${v} integrity.`,'bad');
+    } else if(out==='losepower'){
+      const v=seg.value;
+      G.powerLevel=clamp(G.powerLevel-v,1,100);
+      bigText=`-${v} PWR`;bigColor='var(--accent)';subText='POWER LEVEL DRAINED';
+      addLog(`Defeat penalty: -${v} power level.`,'bad');
+    } else if(out==='losecreds'){
+      const v=seg.value;
+      G.credits=clamp(G.credits-v,0,9999);
+      bigText=`-${v}CR`;bigColor='var(--yellow)';subText='CREDITS SEIZED';
+      addLog(`Defeat penalty: -${v} credits taken.`,'bad');
+    } else if(out==='checkpoint'){
+      G.position=G.lastCheckpoint;
+      bigText='CHECKPOINT';bigColor='var(--purple)';subText=`SENT BACK TO SECTOR ${G.lastCheckpoint}`;
+      addLog(`Defeat penalty: sent back to checkpoint at sector ${G.lastCheckpoint}.`,'bad');
+      renderMap();
+    }
+
+    updateHUD();
+    const res=document.getElementById('spinResult');
+    if(res) res.innerHTML=`<div class="result-splash fade-in">
+      <div class="result-big" style="color:${bigColor}">${bigText}</div>
+      <div class="result-sub">${subText}</div>
+      <div class="btn-row" style="justify-content:center;margin-top:14px">
+        ${G.hp>0?`<button class="btn btn-accent" onclick="${!G.tutorialDone?'afterTutorialCombat()':'afterLoss()'}">CONTINUE →</button>`:''}
+      </div>
+    </div>`;
+    if(G.hp<=0)setTimeout(renderDead,1000);
+    return;
+  }
+
+  // ─── WIN/LOSE COMBAT ROULETTE ───
+  clearCombatBuffs();
+  const out=seg.outcome;
+
+  if(out==='credits'){
+    const v=seg.value;
+    G.credits+=v;G.totalCredits+=v;G.kills++;
+    addLog(`VICTORY! +${v} credits. ${e.name} eliminated.`,'good');
+    updateHUD();
+    showSpinResult(`+${v} CREDITS`,'var(--green)','ENEMY DEFEATED',true);
+  } else if(out==='power'){
+    const v=seg.value;
+    G.powerLevel=clamp(G.powerLevel+v,0,100);G.kills++;
+    addLog(`VICTORY! +${v} power level. ${e.name} destroyed.`,'good');
+    updateHUD();
+    showSpinResult(`+${v} POWER`,'var(--accent)','POWER LEVEL GAINED',true);
+  } else if(out==='powerup'){
+    const pu=seg.pu||POWERUPS_COMBAT[rng(0,POWERUPS_COMBAT.length-1)];
+    pu.apply(G);
+    G.activePowerups.push(pu.name);G.kills++;
+    addLog(`VICTORY! Powerup: ${pu.name} — ${pu.desc}`,'good');
+    updateHUD();
+    showSpinResult(pu.name,'var(--purple)',pu.desc,true);
+  } else if(out==='advance'){
+    const prevPos=G.position;
+    G.position=clamp(G.position+4,0,DUNGEON_LENGTH-1);G.kills++;
+    // Find any checkpoint the jump passed over or landed on
+    const crossed=CHECKPOINTS.filter(cp=>cp>prevPos&&cp<=G.position&&cp>0);
+    if(crossed.length){G.lastCheckpoint=crossed[crossed.length-1];}
+    addLog(`VICTORY! Advanced 4 sectors! Now at sector ${G.position}.`,'good');
+    updateHUD();renderMap();
+    const subNote=crossed.length?` — OUTPOST ${crossed[crossed.length-1]} CROSSED`:'';
+    showSpinResult('+4 SECTORS','var(--blue)',`RAPID ADVANCE${subNote}`,'advance');
+  } else if(out==='back'||out==='losepower'||out==='losecreds'||out==='checkpoint'||out==='loseint'){
+    // Combat loss — trigger the defeat penalty roulette
+    G.kills; // no kill
+    addLog(`DEFEATED by ${e.name}! Spin the penalty roulette.`,'bad');
+    G.spinType='loss';
+    setTimeout(()=>{renderSpinScreen();},600);
+  }
+}
+
+function showSpinResult(big,color,sub,win){
+  const res=document.getElementById('spinResult');
+  if(!res)return;
+  const continueHandler=(!G.tutorialDone)?'afterTutorialCombat()':'afterCombat(\''+win+'\')';
+  res.innerHTML=`<div class="result-splash fade-in">
+    <div class="result-big" style="color:${color}">${big}</div>
+    <div class="result-sub">${sub}</div>
+    <div class="btn-row" style="justify-content:center;margin-top:14px">
+      <button class="btn btn-accent" onclick="${continueHandler}">CONTINUE →</button>
+    </div>
+  </div>`;
+}
+
+function afterCombat(win){
+  G.currentEnemy=null;
+  if(G.hp<=0){renderDead();return;}
+  if(win===true||win==='true'){
+    G.position=clamp(G.position+1,0,DUNGEON_LENGTH-1);
+    renderMap();
+  }
+  // win==='advance': position already set by advance outcome, just check shop
+  if(G.position>=DUNGEON_LENGTH-1){renderWin();return;}
+  checkAndOpenShop(()=>renderNav());
+}
+
+function afterLoss(){
+  G.currentEnemy=null;
+  if(G.hp<=0){renderDead();return;}
+  if(G.position>=DUNGEON_LENGTH){renderWin();return;}
+  checkAndOpenShop(()=>renderNav());
+}
+
+function afterRetreat(){
+  if(G.hp<=0){renderDead();return;}
+  G.position=clamp(G.position-1,0,DUNGEON_LENGTH-1);
+  renderMap();
+  addLog(`Retreated to sector ${G.position}.`,'warn');
+  checkAndOpenShop(()=>renderNav());
+}
+
+// Always open shop if at basecamp (0) or any checkpoint; otherwise call cb()
+function checkAndOpenShop(cb){
+  if(G.position===0){
+    G.lastCheckpoint=0;
+    addLog('Returned to Basecamp — armory open.','sys');
+    renderShop(false,'weapons');
+  } else if(CHECKPOINTS.includes(G.position)){
+    G.lastCheckpoint=G.position;
+    addLog(`Outpost at sector ${G.position} — resupply available.`,'sys');
+    renderShop(true,'weapons');
+  } else {
+    cb();
+  }
+}
+
+// ═══════════════════════════════════════════
+// END STATES
+// ═══════════════════════════════════════════
+function renderDead(){
+  G.phase='dead';
+  const hpColor=G.hp>60?'var(--green)':G.hp>30?'var(--yellow)':'var(--red)';
+  setScreen('// RUNNER TERMINATED',`
+    <div class="endscreen fade-in">
+      <div style="font-size:44px;margin-bottom:8px">💀</div>
+      <div class="end-title" style="font-size:28px;color:var(--red)">SIGNAL LOST</div>
+      <div style="color:var(--text3);font-size:9px;letter-spacing:5px;margin:8px 0 16px">RUNNER INTEGRITY ZERO</div>
+
+      <div style="background:var(--bg3);border:1px solid var(--border);padding:14px 16px;max-width:420px;margin:0 auto 16px;text-align:left">
+        <div style="font-size:8px;letter-spacing:3px;color:var(--text3);margin-bottom:12px">FINAL STATS</div>
+        <div class="stats-grid" style="margin:0">
+          <div class="stat-box"><div class="stat-lbl">SECTOR REACHED</div><div class="stat-num">${G.position} / ${DUNGEON_LENGTH-1}</div></div>
+          <div class="stat-box"><div class="stat-lbl">LAST CHECKPOINT</div><div class="stat-num" style="color:var(--blue)">${G.lastCheckpoint}</div></div>
+          <div class="stat-box"><div class="stat-lbl">ENEMIES KILLED</div><div class="stat-num">${G.kills}</div></div>
+          <div class="stat-box"><div class="stat-lbl">POWER LEVEL</div><div class="stat-num" style="color:var(--accent)">${G.powerLevel}</div></div>
+          <div class="stat-box"><div class="stat-lbl">CREDITS HELD</div><div class="stat-num" style="color:var(--yellow)">${G.credits}</div></div>
+          <div class="stat-box"><div class="stat-lbl">TOTAL CREDITS</div><div class="stat-num" style="color:var(--yellow)">${G.totalCredits}</div></div>
+          <div class="stat-box"><div class="stat-lbl">INTEGRITY</div><div class="stat-num" style="color:var(--red)">0 / ${G.maxHp}</div></div>
+          <div class="stat-box"><div class="stat-lbl">WEAPON</div><div class="stat-num" style="font-size:11px">${equippedWeapon().icon} ${equippedWeapon().name}</div></div>
+        </div>
+      </div>
+
+      <div class="btn-row" style="justify-content:center;flex-wrap:wrap;gap:10px">
+        <button class="btn btn-accent" onclick="showLaunchPage()" style="padding:12px 24px;font-size:11px;letter-spacing:3px">⟳ NEW RUNNER</button>
+        <button class="btn btn-blue" onclick="restartFromCheckpoint()" style="padding:12px 24px;font-size:11px;letter-spacing:3px">↩ FROM CHECKPOINT ${G.lastCheckpoint}</button>
+      </div>
+    </div>`);
+}
+
+function renderWin(){
+  G.phase='win';
+  playerLevel++;
+  localStorage.setItem('runners_playerLevel',playerLevel);
+  const diff=DIFFICULTIES[G.difficulty]||DIFFICULTIES.normal;
+  const nextNg=G.ngPlusLevel+1;
+  setScreen('// MISSION COMPLETE',`
+    <div class="endscreen fade-in">
+      <div style="font-size:44px;margin-bottom:8px">🏆</div>
+      <div class="end-title" style="font-size:26px;color:var(--green)">DUNGEON CLEARED</div>
+      <div style="color:var(--text3);font-size:9px;letter-spacing:4px;margin:8px 0 6px">ALL SECTORS CONQUERED</div>
+      <div style="font-family:'Orbitron',monospace;font-size:12px;color:var(--accent);letter-spacing:3px;margin-bottom:16px">RUNNER LEVEL: ${playerLevel}</div>
+      ${G.ngPlusLevel>0?`<div style="font-family:'Orbitron',monospace;font-size:10px;color:var(--purple);letter-spacing:3px;margin-bottom:16px">NG+ ${G.ngPlusLevel} COMPLETE</div>`:''}
+
+      <div style="background:var(--bg3);border:1px solid var(--border);padding:14px 16px;max-width:420px;margin:0 auto 16px;text-align:left">
+        <div style="font-size:8px;letter-spacing:3px;color:var(--text3);margin-bottom:12px">FINAL STATS</div>
+        <div class="stats-grid" style="margin:0">
+          <div class="stat-box"><div class="stat-lbl">SECTORS CLEARED</div><div class="stat-num" style="color:var(--green)">${DUNGEON_LENGTH}</div></div>
+          <div class="stat-box"><div class="stat-lbl">ENEMIES KILLED</div><div class="stat-num">${G.kills}</div></div>
+          <div class="stat-box"><div class="stat-lbl">FINAL INTEGRITY</div><div class="stat-num" style="color:var(--green)">${G.hp} / ${G.maxHp}</div></div>
+          <div class="stat-box"><div class="stat-lbl">POWER LEVEL</div><div class="stat-num" style="color:var(--accent)">${G.powerLevel}</div></div>
+          <div class="stat-box"><div class="stat-lbl">CREDITS HELD</div><div class="stat-num" style="color:var(--yellow)">${G.credits}</div></div>
+          <div class="stat-box"><div class="stat-lbl">TOTAL CREDITS</div><div class="stat-num" style="color:var(--yellow)">${G.totalCredits}</div></div>
+          <div class="stat-box"><div class="stat-lbl">WEAPON</div><div class="stat-num" style="font-size:11px">${equippedWeapon().icon} ${equippedWeapon().name}</div></div>
+          <div class="stat-box"><div class="stat-lbl">DIFFICULTY</div><div class="stat-num" style="font-size:11px;color:${diff.color}">${diff.label}</div></div>
+        </div>
+      </div>
+
+      <div class="btn-row" style="justify-content:center;flex-wrap:wrap;gap:10px">
+        <button class="btn btn-green" onclick="startNewGamePlus()" style="padding:12px 24px;font-size:11px;letter-spacing:3px">⚡ CONTINUE+ NG${nextNg}</button>
+        <button class="btn btn-accent" onclick="showLaunchPage()" style="padding:12px 24px;font-size:11px;letter-spacing:3px">⟳ NEW RUNNER</button>
+      </div>
+    </div>`);
+}
+
+function resetGame(){
+  const diff=selectedDifficulty;
+  G={hp:100,maxHp:100,powerLevel:10,credits:200,equippedWeapon:'smg',ownedWeapons:['fists','smg'],
+     inventory:{},shopBought:{},
+     position:0,lastCheckpoint:0,phase:'shop',currentEnemy:null,spinning:false,spinType:null,
+     activePowerups:[],shielded:false,luckyBonus:0,tempPower:0,empActive:false,kills:0,totalCredits:0,
+     lastItemUse:null,difficulty:diff,ngPlusLevel:0,tutorialDone:false,tutorialEncounters:0};
+  itemQueue={};
+  document.getElementById('logWrap').innerHTML=`
+    <div class="log-line sys">&gt; NEW RUNNER DEPLOYED — SYSTEM RESET</div>
+    <div class="log-line sys">&gt; DIFFICULTY: ${(DIFFICULTIES[diff]||DIFFICULTIES.normal).label}</div>
+    <div class="log-line sys">&gt; VISIT BASECAMP ARMORY BEFORE DEPLOYING</div>`;
+  updateHUD();renderMap();renderShop(false,'weapons');
+}
+
+function startNewGamePlus(){
+  G.ngPlusLevel++;
+  G.hp=G.maxHp;
+  G.position=0;
+  G.lastCheckpoint=0;
+  G.phase='shop';
+  G.currentEnemy=null;
+  G.spinning=false;
+  G.spinType=null;
+  G.shielded=false;
+  G.luckyBonus=0;
+  G.tempPower=0;
+  G.empActive=false;
+  G.activePowerups=[];
+  G.shopBought={};
+  G.lastItemUse=null;
+  itemQueue={};
+  const diff=DIFFICULTIES[G.difficulty]||DIFFICULTIES.normal;
+  document.getElementById('logWrap').innerHTML=`
+    <div class="log-line sys">&gt; NEW GAME+ LEVEL ${G.ngPlusLevel} — ENEMIES STRENGTHENED</div>
+    <div class="log-line sys">&gt; DIFFICULTY: ${diff.label} // NG+${G.ngPlusLevel}</div>
+    <div class="log-line sys">&gt; PROGRESS RETAINED — SHOP LIMITS REDUCED</div>`;
+  updateHUD();renderMap();renderShop(false,'weapons');
+}
+
+function showLaunchPage(){
+  document.getElementById('launchPage').style.display='flex';
+  renderLaunchPage();
+}
+
+function renderLaunchPage(){
+  const lvlEl=document.getElementById('launchLevel');
+  lvlEl.innerHTML=playerLevel>0?`RUNNER LEVEL: <span>${playerLevel}</span>`:'';
+  const ngEl=document.getElementById('launchNgBadge');
+  ngEl.textContent='';
+  const group=document.getElementById('diffGroup');
+  group.innerHTML=Object.entries(DIFFICULTIES).map(([key,d])=>`
+    <button class="diff-btn${selectedDifficulty===key?' selected':''}" style="${selectedDifficulty===key?'border-color:'+d.color+';color:'+d.color:''}" onclick="selectDifficulty('${key}')">
+      ${d.label}<div class="diff-desc">${d.desc}</div>
+    </button>`).join('');
+  if(launchGlitch) launchGlitch.stop();
+  const el=document.getElementById('launchLogo');
+  if(el) launchGlitch=createGlitchEngine(el);
+}
+
+function selectDifficulty(key){
+  selectedDifficulty=key;
+  renderLaunchPage();
+}
+
+function startFromLaunch(){
+  if(launchGlitch){launchGlitch.stop();launchGlitch=null;}
+  document.getElementById('launchPage').style.display='none';
+  resetGame();
+  // Override for tutorial: fists only, no credits, no SMG
+  G.credits=0;
+  G.totalCredits=0;
+  G.ownedWeapons=['fists'];
+  G.equippedWeapon='fists';
+  G.tutorialEncounters=0;
+  G.tutorialDone=false;
+  document.getElementById('logWrap').innerHTML=`
+    <div class="log-line sys">&gt; ROOK DEPLOYMENT INITIATED</div>
+    <div class="log-line sys">&gt; SURVIVE 2 ENCOUNTERS TO REACH BASECAMP</div>`;
+  updateHUD();
+  renderTutorialIntro();
+}
+
+// ═══════════════════════════════════════════
+// TUTORIAL (ROOK PHASE)
+// ═══════════════════════════════════════════
+const TUTORIAL_ENEMIES=[
+  {id:'t_drone',name:'DAMAGED DRONE',tier:'GRUNT',icon:'🤖',power:4,credits:[8,15],desc:'Malfunctioning patrol unit. Easy target.', minZone:0,maxZone:0},
+  {id:'t_crawler',name:'PFHOR SCOUT',tier:'GRUNT',icon:'👾',power:6,credits:[10,20],desc:'Lone scout. Not expecting resistance.', minZone:0,maxZone:0},
+];
+
+function renderTutorialIntro(){
+  G.phase='tutorial';
+  setScreen('// ROOK ORIENTATION',`
+    <div class="endscreen fade-in">
+      <div style="font-size:44px;margin-bottom:8px">🔰</div>
+      <div class="end-title" style="font-size:22px;color:var(--blue)">ROOK DEPLOYMENT</div>
+      <div style="color:var(--text3);font-size:9px;letter-spacing:4px;margin:8px 0 16px">FIELD ORIENTATION PROTOCOL</div>
+
+      <div style="background:var(--bg3);border:1px solid var(--border);padding:14px 16px;max-width:480px;margin:0 auto 16px;text-align:left">
+        <div style="font-size:9px;letter-spacing:2px;color:var(--blue);margin-bottom:10px">INCOMING TRANSMISSION</div>
+        <div style="font-size:11px;color:var(--text);line-height:1.8">
+          Welcome, Rook. Before you reach basecamp, you'll need to survive <strong style="color:var(--accent)">2 hostile encounters</strong> with nothing but your fists.<br><br>
+          Win the combat roulette to earn <strong style="color:var(--yellow)">credits</strong> and <strong style="color:var(--purple)">powerups</strong>. You'll be issued standard equipment and a signing bonus when you arrive at basecamp.
+        </div>
+      </div>
+
+      <div class="btn-row" style="justify-content:center">
+        <button class="btn btn-accent" onclick="startTutorialEncounter()" style="padding:12px 28px;font-size:12px;letter-spacing:3px">PROCEED →</button>
+      </div>
+    </div>`);
+}
+
+function startTutorialEncounter(){
+  G.phase='combat';
+  const base=TUTORIAL_ENEMIES[G.tutorialEncounters%TUTORIAL_ENEMIES.length];
+  G.currentEnemy={
+    ...base,
+    credits:rng(base.credits[0],base.credits[1]),
+    scaledPower:base.power,
+  };
+  addLog(`ROOK ENCOUNTER ${G.tutorialEncounters+1}/2: ${G.currentEnemy.name} [PWR: ${base.power}]`,'bad');
+  itemQueue={};
+  renderCombat();
+}
+
+function afterTutorialCombat(){
+  G.currentEnemy=null;
+  if(G.hp<=0){renderDead();return;}
+  G.tutorialEncounters++;
+  if(G.tutorialEncounters>=2){
+    completeTutorial();
+  } else {
+    // Show brief continue screen before next encounter
+    setScreen('// ROOK ORIENTATION',`
+      <div class="endscreen fade-in">
+        <div style="font-size:32px;margin-bottom:8px">✓</div>
+        <div class="end-title" style="font-size:18px;color:var(--green)">ENCOUNTER ${G.tutorialEncounters}/2 CLEARED</div>
+        <div style="color:var(--text3);font-size:9px;letter-spacing:3px;margin:8px 0 16px">ONE MORE HOSTILE AHEAD</div>
+        <div class="btn-row" style="justify-content:center">
+          <button class="btn btn-accent" onclick="startTutorialEncounter()" style="padding:12px 28px;font-size:12px;letter-spacing:3px">NEXT ENCOUNTER →</button>
+        </div>
+      </div>`);
+  }
+}
+
+function completeTutorial(){
+  G.tutorialDone=true;
+  // Grant signing bonus: enough for the first real weapon (shotgun = 120)
+  const bonus=120;
+  G.credits+=bonus;
+  G.totalCredits+=bonus;
+  // Issue standard SMG
+  G.ownedWeapons.push('smg');
+  G.equippedWeapon='smg';
+  updateHUD();
+
+  setScreen('// BASECAMP REACHED',`
+    <div class="endscreen fade-in">
+      <div style="font-size:44px;margin-bottom:8px">🏠</div>
+      <div class="end-title" style="font-size:22px;color:var(--green)">WELCOME TO BASECAMP</div>
+      <div style="color:var(--text3);font-size:9px;letter-spacing:4px;margin:8px 0 16px">ROOK ORIENTATION COMPLETE</div>
+
+      <div style="background:var(--bg3);border:1px solid var(--border);padding:14px 16px;max-width:480px;margin:0 auto 16px;text-align:left">
+        <div style="font-size:9px;letter-spacing:2px;color:var(--green);margin-bottom:10px">SUPPLY REQUISITION</div>
+        <div style="font-size:11px;color:var(--text);line-height:1.8">
+          Solid work, Rook. You've been issued an <strong style="color:var(--text)">🔫 M75 SMG</strong> and a signing bonus of <strong style="color:var(--yellow)">◈ ${bonus} credits</strong>.<br><br>
+          Visit the armory to upgrade your loadout before deploying into the dungeon.
+          ${G.credits>bonus?`<br><br>You also earned <strong style="color:var(--yellow)">◈ ${G.credits-bonus} credits</strong> from your encounters.`:''}
+        </div>
+      </div>
+
+      <div class="btn-row" style="justify-content:center">
+        <button class="btn btn-accent" onclick="renderShop(false,'weapons')" style="padding:12px 28px;font-size:12px;letter-spacing:3px">ENTER ARMORY →</button>
+      </div>
+    </div>`);
+}
+
+function restartFromCheckpoint(){
+  const cp=G.lastCheckpoint;
+  const prevCredits=G.credits;
+  const prevPower=G.powerLevel;
+  const prevWeapons=[...G.ownedWeapons];
+  const prevEquipped=G.equippedWeapon;
+  const prevInventory={...G.inventory};
+  // Reset run state but keep progress: position, weapons, credits, power all carry over
+  G.hp=G.maxHp;
+  G.position=cp;
+  G.lastCheckpoint=cp;
+  G.phase='shop';
+  G.currentEnemy=null;
+  G.spinning=false;
+  G.spinType=null;
+  G.shielded=false;
+  G.luckyBonus=0;
+  G.tempPower=0;
+  G.empActive=false;
+  G.activePowerups=[];
+  G.lastItemUse=null;
+  G.shopBought={};
+  itemQueue={};
+  addLog(`Resuming from checkpoint sector ${cp} — integrity restored.`,'sys');
+  updateHUD();renderMap();
+  renderShop(cp>0,'weapons');
+}
+
+// ═══════════════════════════════════════════
+// LOGO GLITCH ENGINE
+// ═══════════════════════════════════════════
+let launchGlitch=null;
+
+function createGlitchEngine(h1){
+  if(!h1)return null;
+  const BRIGHT_SHADOW='0 0 60px rgba(232,99,42,0.8)';
+  let lastWasTop=null;
+  let idleRafId=null;
+  let idleT=0;
+  let stopped=false;
+  let timeoutIds=[];
+
+  function safeTimeout(fn,ms){const id=setTimeout(fn,ms);timeoutIds.push(id);return id;}
+
+  function startIdlePulse(){
+    if(idleRafId||stopped)return;
+    function tick(){
+      if(stopped)return;
+      idleT+=0.018;
+      const g=Math.sin(idleT)*0.5+0.5;
+      const shift=Math.sin(idleT*0.7)*1.8;
+      const greenAmt=(0.55+g*0.3).toFixed(2);
+      const orangeAmt=(0.3+g*0.2).toFixed(2);
+      const glowSize=(38+g*22).toFixed(0);
+      h1.style.textShadow=`${shift.toFixed(2)}px 0 rgba(0,255,120,${greenAmt}),${(-shift*0.5).toFixed(2)}px 0 rgba(232,99,42,${orangeAmt}),0 0 ${glowSize}px rgba(232,99,42,${(0.4+g*0.2).toFixed(2)})`;
+      idleRafId=requestAnimationFrame(tick);
+    }
+    tick();
+  }
+  function stopIdlePulse(){
+    if(idleRafId){cancelAnimationFrame(idleRafId);idleRafId=null;}
+  }
+
+  function randBetween(lo,hi){return lo+Math.random()*(hi-lo);}
+
+  function randomClip(){
+    const goTop=lastWasTop===null?Math.random()<0.5:lastWasTop?Math.random()<0.3:Math.random()<0.7;
+    lastWasTop=goTop;
+    const bandHeight=randBetween(8,20);
+    let start,end;
+    if(goTop){start=randBetween(2,15);end=Math.min(start+bandHeight,48);}
+    else{end=randBetween(85,98);start=Math.max(end-bandHeight,52);}
+    return `polygon(0 ${start.toFixed(1)}%,100% ${start.toFixed(1)}%,100% ${end.toFixed(1)}%,0 ${end.toFixed(1)}%)`;
+  }
+
+  function fireHit(){
+    if(stopped)return;
+    stopIdlePulse();
+    const hasClip=Math.random()<0.55;
+    const skewDir=Math.random()<0.5?1:-1;
+    const skewAmt=(randBetween(1,3.5)*skewDir).toFixed(1);
+    const txAmt=(randBetween(1,4)*skewDir*-1).toFixed(1);
+    const cyanOff=Math.round(randBetween(3,6));
+    const redOff=Math.round(randBetween(3,6));
+    h1.style.textShadow=`${cyanOff}px 0 rgba(0,255,200,0.85),${-redOff}px 0 rgba(255,0,80,0.85),${BRIGHT_SHADOW}`;
+    h1.style.transform=`skewX(${skewAmt}deg) translateX(${txAmt}px)`;
+    if(hasClip) h1.style.clipPath=randomClip();
+    safeTimeout(()=>{
+      if(stopped)return;
+      h1.style.transform='none';
+      h1.style.clipPath='none';
+      startIdlePulse();
+    }, randBetween(120,450));
+  }
+
+  function scheduleNext(){
+    if(stopped)return;
+    safeTimeout(()=>{
+      if(stopped)return;
+      fireHit();
+      if(Math.random()<0.5){
+        const extra=Math.random()<0.4?2:1;
+        for(let i=0;i<extra;i++) safeTimeout(fireHit, randBetween(120,400)*(i+1));
+      }
+      scheduleNext();
+    }, randBetween(800,3500));
+  }
+
+  scheduleNext();
+  startIdlePulse();
+
+  return {
+    stop(){
+      stopped=true;
+      stopIdlePulse();
+      timeoutIds.forEach(clearTimeout);
+      timeoutIds=[];
+      h1.style.textShadow='';h1.style.transform='';h1.style.clipPath='';
+    }
+  };
+}
+
+// Header logo glitch — always running
+createGlitchEngine(document.querySelector('.header .logo-wrap h1'));
+
+// ═══════════════════════════════════════════
+// PAUSE MENU
+// ═══════════════════════════════════════════
+let paused=false;
+
+function togglePause(){
+  paused=!paused;
+  const overlay=document.getElementById('pauseOverlay');
+  const btn=document.getElementById('pauseBtn');
+  if(paused){
+    // Populate live stats
+    const w=equippedWeapon();
+    const hpPct=Math.round((G.hp/G.maxHp)*100);
+    document.getElementById('pauseStats').innerHTML=`
+      <div class="stat-box"><div class="stat-lbl">INTEGRITY</div><div class="stat-num" style="color:${hpPct>60?'var(--green)':hpPct>30?'var(--yellow)':'var(--red)'}">${G.hp} / ${G.maxHp}</div></div>
+      <div class="stat-box"><div class="stat-lbl">POWER LEVEL</div><div class="stat-num" style="color:var(--accent)">${G.powerLevel}</div></div>
+      <div class="stat-box"><div class="stat-lbl">SECTOR</div><div class="stat-num">${G.position} / ${DUNGEON_LENGTH-1}</div></div>
+      <div class="stat-box"><div class="stat-lbl">CHECKPOINT</div><div class="stat-num" style="color:var(--blue)">${G.lastCheckpoint}</div></div>
+      <div class="stat-box"><div class="stat-lbl">CREDITS</div><div class="stat-num" style="color:var(--yellow)">${G.credits}</div></div>
+      <div class="stat-box"><div class="stat-lbl">KILLS</div><div class="stat-num">${G.kills}</div></div>
+      <div class="stat-box" style="grid-column:span 2"><div class="stat-lbl">WEAPON</div><div class="stat-num" style="font-size:12px">${w.icon} ${w.name}</div></div>
+    `;
+    // Update checkpoint button label
+    const cpBtn=document.getElementById('pauseCheckpointBtn');
+    if(cpBtn) cpBtn.textContent=`↩ RESTART FROM CHECKPOINT ${G.lastCheckpoint}`;
+    overlay.style.display='flex';
+    btn.textContent='▶ RESUME';
+    btn.style.borderColor='var(--blue)';
+    btn.style.color='var(--blue)';
+  } else {
+    overlay.style.display='none';
+    btn.textContent='⏸ PAUSE';
+    btn.style.borderColor='var(--accent)';
+    btn.style.color='var(--accent)';
+  }
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&document.getElementById('launchPage').style.display!=='flex') togglePause();
+});
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+renderLaunchPage();
+</script>
+</body>
+</html>
