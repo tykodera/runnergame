@@ -215,6 +215,13 @@ html,body{min-height:100vh;height:100%;background:var(--bg);color:var(--text);fo
 .inv-chip{cursor:pointer;transition:background 0.15s}
 .inv-chip:hover{background:rgba(232,99,42,0.15)}
 #infoPopup{display:none;position:fixed;z-index:9994;background:var(--panel);border:1px solid var(--border2);padding:14px 16px;max-width:320px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.6)}
+#confirmOverlay{display:none;position:fixed;inset:0;z-index:9996;background:rgba(6,7,9,0.88);backdrop-filter:blur(3px);align-items:center;justify-content:center}
+#confirmOverlay .confirm-box{background:var(--panel);border:1px solid var(--border2);padding:24px 22px;max-width:400px;width:90%;position:relative;text-align:center}
+#confirmOverlay .confirm-box::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--red),transparent)}
+#confirmOverlay .confirm-title{font-family:'Orbitron',monospace;font-size:14px;font-weight:700;letter-spacing:4px;color:var(--red);margin-bottom:12px}
+#confirmOverlay .confirm-desc{font-size:10px;color:var(--text2);line-height:1.8;letter-spacing:1px;margin-bottom:18px}
+#confirmOverlay .confirm-warn{font-size:9px;color:var(--yellow);letter-spacing:2px;padding:8px 12px;border:1px solid rgba(232,197,58,0.2);background:rgba(232,197,58,0.05);margin-bottom:18px}
+#confirmOverlay .confirm-btns{display:flex;gap:10px;justify-content:center}
 #infoPopup .popup-title{font-family:'Orbitron',monospace;font-size:12px;font-weight:700;letter-spacing:3px;margin-bottom:6px}
 #infoPopup .popup-desc{font-size:10px;color:var(--text2);line-height:1.6;letter-spacing:1px}
 #infoPopup .popup-close{position:absolute;top:8px;right:10px;background:none;border:none;color:var(--text3);font-size:14px;cursor:pointer}
@@ -347,7 +354,8 @@ html,body{min-height:100vh;height:100%;background:var(--bg);color:var(--text);fo
     <div style="background:var(--panel);border:1px solid var(--border2);padding:32px 28px;max-width:440px;width:90%;position:relative">
       <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--accent),transparent)"></div>
       <div style="font-family:'Orbitron',monospace;font-size:18px;font-weight:700;color:var(--accent);letter-spacing:6px;margin-bottom:4px">PAUSED</div>
-      <div style="font-size:9px;letter-spacing:3px;color:var(--text3);margin-bottom:20px">RUNNER UPLINK SUSPENDED</div>
+      <div style="font-size:9px;letter-spacing:3px;color:var(--text3);margin-bottom:6px">RUNNER UPLINK SUSPENDED</div>
+      <div style="font-family:'Orbitron',monospace;font-size:10px;color:var(--accent);letter-spacing:3px;margin-bottom:16px" id="pauseLevel"></div>
 
       <div style="background:var(--bg3);border:1px solid var(--border);padding:12px 14px;margin-bottom:18px">
         <div style="font-size:8px;letter-spacing:3px;color:var(--text3);margin-bottom:10px">CURRENT RUN</div>
@@ -416,6 +424,21 @@ html,body{min-height:100vh;height:100%;background:var(--bg);color:var(--text);fo
   <div class="popup-desc" id="popupDesc"></div>
 </div>
 
+<div id="confirmOverlay">
+  <div class="confirm-box">
+    <div class="confirm-title">⚠ RETREAT WARNING</div>
+    <div class="confirm-desc">
+      Retreating forces you through a <span style="color:var(--red)">PENALTY ROULETTE</span> that deals integrity damage.<br><br>
+      The further you progress through the dungeon, the <span style="color:var(--red)">MORE SEVERE</span> the retreat penalties become.
+    </div>
+    <div class="confirm-warn">PENALTY SCALES WITH SECTOR DEPTH</div>
+    <div class="confirm-btns">
+      <button class="btn btn-red" onclick="confirmRetreat()">↩ RETREAT ANYWAY</button>
+      <button class="btn btn-blue" onclick="cancelRetreat()">✕ CANCEL</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ═══════════════════════════════════════════
 // DATA
@@ -435,37 +458,37 @@ const WEAPONS = [
 // Zones: 1-4=GRUNT, 3-4=PRE-OUTPOST1 harder, 5-9=SOLDIER, 8-9=PRE-OUTPOST2 harder,
 //         10-14=ELITE, 13-14=PRE-OUTPOST3 harder, 15-18=BOSS-TIER, 19=FINAL
 const ENEMIES = [
-  // GRUNT — zones 1-4 (base power 8-18)
-  {id:'fighter',  name:'PFHOR FIGHTER',   tier:'GRUNT',   icon:'👾', power:8,  credits:[10,25], desc:'Standard infantry. Predictable.', minZone:1, maxZone:5},
-  {id:'drone',    name:"S'PHT DRONE",     tier:'GRUNT',   icon:'🤖', power:10, credits:[8,22],  desc:'Autonomous AI. Medium evasion.',  minZone:1, maxZone:5},
-  {id:'wasp',     name:'BIO WASP',        tier:'GRUNT',   icon:'🐝', power:12, credits:[12,20], desc:'Fast swarm construct.',           minZone:1, maxZone:4},
-  {id:'crawler',  name:'PFHOR CRAWLER',   tier:'GRUNT',   icon:'🦀', power:15, credits:[14,26], desc:'Aggressive but fragile.',         minZone:2, maxZone:5},
-  {id:'sentry',   name:'SENTRY DRONE',    tier:'GRUNT',   icon:'🔩', power:18, credits:[16,28], desc:'Automated patrol unit.',          minZone:3, maxZone:6},
-  // SOLDIER — zones 4-9 (base power 22-35)
-  {id:'enforcer', name:'PFHOR ENFORCER',  tier:'SOLDIER', icon:'🦂', power:22, credits:[25,45], desc:'Heavy unit. Well armored.',       minZone:4, maxZone:10},
-  {id:'hunter',   name:'HUNTER UNIT',     tier:'SOLDIER', icon:'🎯', power:26, credits:[30,50], desc:'Precision targeting.',            minZone:5, maxZone:10},
-  {id:'cyborg',   name:'CYBORG TROOPER',  tier:'SOLDIER', icon:'🦾', power:30, credits:[28,48], desc:'Flesh-machine hybrid.',           minZone:5, maxZone:11},
-  {id:'specter',  name:'PFHOR SPECTER',   tier:'SOLDIER', icon:'👻', power:33, credits:[32,55], desc:'Cloaking technology. Dangerous.', minZone:6, maxZone:11},
-  {id:'warden',   name:'SECTOR WARDEN',   tier:'SOLDIER', icon:'⚔️', power:38, credits:[38,60], desc:'Guardian variant. Enhanced reflexes.', minZone:7, maxZone:12},
-  // ELITE — zones 9-15 (base power 42-60)
-  {id:'juggernaut',name:'PFHOR JUGGERNAUT',tier:'ELITE', icon:'💀', power:42, credits:[50,80],  desc:'Command-class warrior.',         minZone:9, maxZone:16},
-  {id:'compiler', name:"S'PHT COMPILER",  tier:'ELITE',   icon:'⚡', power:48, credits:[55,90],  desc:'Ancient construct. Electrical.', minZone:10, maxZone:16},
-  {id:'sentinel', name:'APEX SENTINEL',   tier:'ELITE',   icon:'🔮', power:55, credits:[65,100], desc:'Top-tier automated defense.',    minZone:11, maxZone:17},
-  {id:'obliterator',name:'OBLITERATOR',   tier:'ELITE',   icon:'💥', power:62, credits:[70,110], desc:'Demolition unit. Extreme power.',minZone:13, maxZone:18},
+  // GRUNT — zones 1-4 (base power 6-14)
+  {id:'fighter',  name:'PFHOR FIGHTER',   tier:'GRUNT',   icon:'👾', power:6,  credits:[12,28], desc:'Standard infantry. Predictable.', minZone:1, maxZone:5},
+  {id:'drone',    name:"S'PHT DRONE",     tier:'GRUNT',   icon:'🤖', power:8,  credits:[10,25], desc:'Autonomous AI. Medium evasion.',  minZone:1, maxZone:5},
+  {id:'wasp',     name:'BIO WASP',        tier:'GRUNT',   icon:'🐝', power:9,  credits:[14,24], desc:'Fast swarm construct.',           minZone:1, maxZone:4},
+  {id:'crawler',  name:'PFHOR CRAWLER',   tier:'GRUNT',   icon:'🦀', power:11, credits:[16,30], desc:'Aggressive but fragile.',         minZone:2, maxZone:5},
+  {id:'sentry',   name:'SENTRY DRONE',    tier:'GRUNT',   icon:'🔩', power:14, credits:[18,32], desc:'Automated patrol unit.',          minZone:3, maxZone:6},
+  // SOLDIER — zones 4-9 (base power 18-30)
+  {id:'enforcer', name:'PFHOR ENFORCER',  tier:'SOLDIER', icon:'🦂', power:18, credits:[28,50], desc:'Heavy unit. Well armored.',       minZone:4, maxZone:10},
+  {id:'hunter',   name:'HUNTER UNIT',     tier:'SOLDIER', icon:'🎯', power:21, credits:[32,55], desc:'Precision targeting.',            minZone:5, maxZone:10},
+  {id:'cyborg',   name:'CYBORG TROOPER',  tier:'SOLDIER', icon:'🦾', power:24, credits:[30,52], desc:'Flesh-machine hybrid.',           minZone:5, maxZone:11},
+  {id:'specter',  name:'PFHOR SPECTER',   tier:'SOLDIER', icon:'👻', power:27, credits:[35,60], desc:'Cloaking technology. Dangerous.', minZone:6, maxZone:11},
+  {id:'warden',   name:'SECTOR WARDEN',   tier:'SOLDIER', icon:'⚔️', power:30, credits:[40,65], desc:'Guardian variant. Enhanced reflexes.', minZone:7, maxZone:12},
+  // ELITE — zones 9-14 (base power 34-50)
+  {id:'juggernaut',name:'PFHOR JUGGERNAUT',tier:'ELITE', icon:'💀', power:34, credits:[55,90],  desc:'Command-class warrior.',         minZone:9, maxZone:14},
+  {id:'compiler', name:"S'PHT COMPILER",  tier:'ELITE',   icon:'⚡', power:38, credits:[60,95],  desc:'Ancient construct. Electrical.', minZone:10, maxZone:14},
+  {id:'sentinel', name:'APEX SENTINEL',   tier:'ELITE',   icon:'🔮', power:44, credits:[70,110], desc:'Top-tier automated defense.',    minZone:11, maxZone:14},
+  {id:'obliterator',name:'OBLITERATOR',   tier:'ELITE',   icon:'💥', power:50, credits:[75,120], desc:'Demolition unit. Extreme power.',minZone:13, maxZone:14},
   // PRE-CHECKPOINT MINIBOSSES — appear in zones 3-4, 8-9, 13-14 only
-  {id:'alpha',    name:'ALPHA ENFORCER',  tier:'MINIBOSS', icon:'🔥', power:30, credits:[40,65],  desc:'Reinforced variant. Holds the line.',    minZone:3, maxZone:5, preCheckpoint:true},
-  {id:'berserker',name:'BERSERKER UNIT',  tier:'MINIBOSS', icon:'🩸', power:45, credits:[55,80],  desc:'Destabilised combat AI. Unpredictable.', minZone:8, maxZone:10, preCheckpoint:true},
-  {id:'titan',    name:'PFHOR TITAN',     tier:'MINIBOSS', icon:'🗿', power:65, credits:[75,115], desc:'Experimental heavy. Near-unstoppable.',  minZone:13, maxZone:15, preCheckpoint:true},
-  // BOSS — zones 15-19
-  {id:'warlord',  name:'PFHOR WARLORD',   tier:'BOSS',    icon:'👑', power:72, credits:[90,140],  desc:'Sector commander. Execute on sight.', minZone:15, maxZone:20},
-  {id:'archon',   name:"S'PHT ARCHON",    tier:'BOSS',    icon:'🌀', power:82, credits:[100,160], desc:'Ancient overlord. Near-sentient.',    minZone:16, maxZone:20},
-  {id:'darkstar', name:'THE DARK STAR',   tier:'BOSS',    icon:'🌑', power:95, credits:[120,180], desc:'Unknown entity. OMEGA classification.',minZone:18, maxZone:20},
+  {id:'alpha',    name:'ALPHA ENFORCER',  tier:'MINIBOSS', icon:'🔥', power:24, credits:[45,70],  desc:'Reinforced variant. Holds the line.',    minZone:3, maxZone:5, preCheckpoint:true},
+  {id:'berserker',name:'BERSERKER UNIT',  tier:'MINIBOSS', icon:'🩸', power:36, credits:[60,90],  desc:'Destabilised combat AI. Unpredictable.', minZone:8, maxZone:10, preCheckpoint:true},
+  {id:'titan',    name:'PFHOR TITAN',     tier:'MINIBOSS', icon:'🗿', power:52, credits:[80,125], desc:'Experimental heavy. Near-unstoppable.',  minZone:13, maxZone:15, preCheckpoint:true},
+  // BOSS — node 16 only (right after outpost 3)
+  {id:'warlord',  name:'PFHOR WARLORD',   tier:'BOSS',    icon:'👑', power:58, credits:[100,150], desc:'Sector commander. Execute on sight.', minZone:16, maxZone:16},
+  {id:'archon',   name:"S'PHT ARCHON",    tier:'BOSS',    icon:'🌀', power:68, credits:[110,170], desc:'Ancient overlord. Near-sentient.',    minZone:16, maxZone:16},
+  {id:'darkstar', name:'THE DARK STAR',   tier:'BOSS',    icon:'🌑', power:80, credits:[130,200], desc:'Unknown entity. OMEGA classification.',minZone:16, maxZone:16},
 ];
 
-// Dungeon: 20 nodes. 0=BASECAMP, 5=OUTPOST1, 10=OUTPOST2, 15=OUTPOST3, 19=BOSS
-const DUNGEON_LENGTH = 20;
+// Dungeon: 17 nodes. 0=BASECAMP, 5=OUTPOST1, 10=OUTPOST2, 15=OUTPOST3, 16=BOSS
+const DUNGEON_LENGTH = 17;
 const CHECKPOINTS = [0,5,10,15];
-const BOSS_NODE = 19;
+const BOSS_NODE = 16;
 
 const DIFFICULTIES = {
   normal: {label:'NORMAL',desc:'STANDARD RUN',enemyMult:1.0,creditMult:1.0,shopLimitMult:1.0,color:'var(--green)'},
@@ -476,56 +499,72 @@ const DIFFICULTIES = {
 let playerLevel=parseInt(localStorage.getItem('runners_playerLevel')||'0');
 let selectedDifficulty='normal';
 
+// NG+ scaling: player buffs scale at 10% per loop (enemies scale 15%)
+function ngScale(base){return Math.round(base*(1.0+G.ngPlusLevel*0.10));}
+function ngPowerCap(){return 100+G.ngPlusLevel*20;} // power cap increases each loop
+
 const CONSUMABLES = [
-  {id:'stim',name:'STIM PACK',icon:'💉',type:'MEDICAL',price:40,maxStack:3,
-   effect:'Restore 35 integrity instantly.',
+  // BASECAMP (checkpoint 0) — starter items
+  {id:'stim',name:'STIM PACK',icon:'💉',type:'MEDICAL',price:40,maxStack:3,unlockZone:0,
+   get effect(){return`Restore ${ngScale(35)} integrity instantly.`;},
    timing:'any',
-   apply:s=>{s.hp=Math.min(s.maxHp,s.hp+35);return'Stim Pack used — +35 integrity.'}},
-  {id:'superStim',name:'TRAUMA SURGE',icon:'🩸',type:'MEDICAL',price:90,maxStack:2,
-   effect:'Fully restore integrity.',
+   apply:s=>{const v=ngScale(35);s.hp=Math.min(s.maxHp,s.hp+v);return`Stim Pack used — +${v} integrity.`;}},
+  {id:'overclock',name:'OVERCLOCK',icon:'⚡',type:'COMBAT',price:55,maxStack:3,unlockZone:0,
+   get effect(){return`+${ngScale(20)} Power Level for next fight only.`;},
+   timing:'combat',
+   apply:s=>{const v=ngScale(20);s.tempPower=(s.tempPower||0)+v;return`Overclock active — +${v} Power this fight.`;}},
+  {id:'scavkit',name:'SCAV KIT',icon:'📦',type:'UTILITY',price:35,maxStack:3,shopLimit:1,unlockZone:0,
+   effect:'Crack open for 10–100 credits.',
    timing:'any',
-   apply:s=>{s.hp=s.maxHp;return'Trauma Surge used — integrity fully restored.'}},
-  {id:'overclock',name:'OVERCLOCK',icon:'⚡',type:'COMBAT',price:55,maxStack:3,
-   effect:'+20 Power Level for next fight only.',
-   timing:'combat',
-   apply:s=>{s.tempPower=(s.tempPower||0)+20;return'Overclock active — +20 Power this fight.'}},
-  {id:'berserker',name:'BERSERKER',icon:'🔴',type:'COMBAT',price:80,maxStack:2,
-   effect:'+35 Power Level for next fight only.',
-   timing:'combat',
-   apply:s=>{s.tempPower=(s.tempPower||0)+35;return'Berserker active — +35 Power this fight.'}},
-  {id:'shield',name:'BLAST SHIELD',icon:'🛡️',type:'DEFENSE',price:60,maxStack:2,
+   apply:s=>{const roll=Math.random();const base=roll<0.7?rng(10,60):roll<0.9?rng(61,80):rng(81,100);const g=ngScale(base);s.credits+=g;s.totalCredits+=g;return`Scav Kit cracked — +${g} credits.`;}},
+  // OUTPOST 1 (checkpoint 5) — defense & tactics
+  {id:'shield',name:'BLAST SHIELD',icon:'🛡️',type:'DEFENSE',price:60,maxStack:2,unlockZone:5,
    effect:'Absorbs next loss penalty completely.',
    timing:'any',
    apply:s=>{s.shielded=true;return'Blast Shield armed — next loss penalty nullified.'}},
-  {id:'lucky',name:'LUCKY ROUND',icon:'🎰',type:'TACTICAL',price:45,maxStack:3,
+  {id:'lucky',name:'LUCKY ROUND',icon:'🎰',type:'TACTICAL',price:45,maxStack:3,unlockZone:5,
    effect:'+20% win odds on next roulette spin.',
    timing:'combat',
    apply:s=>{s.luckyBonus=(s.luckyBonus||0)+20;return'Lucky Round loaded — +20% win odds.'}},
-  {id:'emp',name:'EMP CHARGE',icon:'💫',type:'TACTICAL',price:70,maxStack:2,
+  {id:'emp',name:'EMP CHARGE',icon:'💫',type:'TACTICAL',price:70,maxStack:2,unlockZone:5,
    effect:'Enemy power cut by 30% for one fight.',
    timing:'combat',
    apply:s=>{s.empActive=true;return'EMP primed — enemy power -30% this fight.'}},
-  {id:'scavkit',name:'SCAV KIT',icon:'📦',type:'UTILITY',price:35,maxStack:3,shopLimit:1,
-   effect:'Crack open for 30–100 credits (random).',
+  // OUTPOST 2 (checkpoint 10) — advanced combat & medical
+  {id:'berserker',name:'BERSERKER',icon:'🔴',type:'COMBAT',price:80,maxStack:2,unlockZone:10,
+   get effect(){return`+${ngScale(35)} Power Level for next fight only.`;},
+   timing:'combat',
+   apply:s=>{const v=ngScale(35);s.tempPower=(s.tempPower||0)+v;return`Berserker active — +${v} Power this fight.`;}},
+  {id:'adrenaline',name:'ADRENALINE',icon:'🧪',type:'MEDICAL',price:65,maxStack:2,unlockZone:10,
+   get effect(){return`+${ngScale(8)} Power Level + ${ngScale(25)} integrity.`;},
    timing:'any',
-   apply:s=>{const g=rng(30,100);s.credits+=g;s.totalCredits+=g;return`Scav Kit cracked — +${g} credits.`}},
-  {id:'nanite',name:'NANITE BOOST',icon:'🔬',type:'UPGRADE',price:100,maxStack:2,
-   effect:'+12 Power Level permanently.',
+   apply:s=>{const pw=ngScale(8);const hp=ngScale(25);s.powerLevel=Math.min(ngPowerCap(),s.powerLevel+pw);s.hp=Math.min(s.maxHp,s.hp+hp);return`Adrenaline hit — +${pw} Power, +${hp} integrity.`;}},
+  // OUTPOST 3 (checkpoint 15) — endgame upgrades
+  {id:'superStim',name:'TRAUMA SURGE',icon:'🩸',type:'MEDICAL',price:90,maxStack:2,unlockZone:15,
+   effect:'Fully restore integrity.',
    timing:'any',
-   apply:s=>{s.powerLevel=Math.min(100,s.powerLevel+12);return'Nanite Boost injected — +12 Power Level permanently.'}},
-  {id:'adrenaline',name:'ADRENALINE',icon:'🧪',type:'MEDICAL',price:65,maxStack:2,
-   effect:'+8 Power Level + 25 integrity.',
+   apply:s=>{s.hp=s.maxHp;return'Trauma Surge used — integrity fully restored.'}},
+  {id:'nanite',name:'NANITE BOOST',icon:'🔬',type:'UPGRADE',price:100,maxStack:2,unlockZone:15,
+   get effect(){return`+${ngScale(12)} Power Level permanently.`;},
    timing:'any',
-   apply:s=>{s.powerLevel=Math.min(100,s.powerLevel+8);s.hp=Math.min(s.maxHp,s.hp+25);return'Adrenaline hit — +8 Power, +25 integrity.'}},
+   apply:s=>{const v=ngScale(12);s.powerLevel=Math.min(ngPowerCap(),s.powerLevel+v);return`Nanite Boost injected — +${v} Power Level permanently.`;}},
+  {id:'regen',name:'REGEN IMPLANT',icon:'💚',type:'UPGRADE',price:175,maxStack:1,unlockZone:15,
+   get effect(){return`Permanently heal ${ngScale(15)} integrity every combat win.`;},
+   timing:'any',noBuy:false,
+   apply:s=>{s.regenImplant=true;return'Regen Implant installed — heal on every combat win.';}},
+  {id:'traumakit',name:'TRAUMA KIT',icon:'🩹',type:'MEDICAL',price:0,maxStack:3,noBuff:true,
+   get effect(){const base=G.difficulty==='brutal'?25:G.difficulty==='hard'?35:45;return`Restore ${ngScale(base)} integrity. Won from combat.`;},
+   timing:'any',
+   apply:s=>{const base=s.difficulty==='brutal'?25:s.difficulty==='hard'?35:45;const amt=ngScale(base);s.hp=Math.min(s.maxHp,s.hp+amt);return`Trauma Kit used — +${amt} integrity.`;}},
 ];
 
 const POWERUPS_COMBAT = [
-  {id:'overdrive',name:'OVERDRIVE',desc:'+15 Power Level permanently',apply:s=>{s.powerLevel=Math.min(100,s.powerLevel+15)}},
-  {id:'medkit',name:'TRAUMA KIT',desc:'Restore 40 integrity',apply:s=>{s.hp=Math.min(s.maxHp,s.hp+40)}},
-  {id:'scavenge',name:'SCAVENGE',desc:'+80 credits',apply:s=>{s.credits+=80;s.totalCredits+=80}},
-  {id:'hardened',name:'HARDENED',desc:'Next loss: absorb penalty',apply:s=>{s.shielded=true}},
-  {id:'luckyspin',name:'LUCKY SPIN',desc:'Win odds +15% for next fight',apply:s=>{s.luckyBonus=(s.luckyBonus||0)+15}},
-  {id:'adrenaline',name:'ADRENALINE',desc:'+10 Power, +20 integrity',apply:s=>{s.powerLevel=Math.min(100,s.powerLevel+10);s.hp=Math.min(s.maxHp,s.hp+20)}},
+  {id:'overdrive',name:'OVERDRIVE',get desc(){return`+${ngScale(15)} Power Level permanently`;},apply:s=>{const v=ngScale(15);s.powerLevel=Math.min(ngPowerCap(),s.powerLevel+v);}},
+  {id:'medkit',name:'TRAUMA KIT',get desc(){const base=G.difficulty==='brutal'?25:G.difficulty==='hard'?35:45;return`+${ngScale(base)} INT kit → inventory`;},apply:s=>{s.inventory=s.inventory||{};s.inventory['traumakit']=(s.inventory['traumakit']||0)+1}},
+  {id:'scavenge',name:'SCAVENGE',get desc(){return`+${ngScale(80)} credits`;},apply:s=>{const v=ngScale(80);s.credits+=v;s.totalCredits+=v;}},
+  {id:'hardened',name:'SHIELDED',desc:'Next penalty fully absorbed',apply:s=>{s.shielded=true}},
+  {id:'luckyspin',name:'LUCKY +15%',desc:'+15% win odds next fight',apply:s=>{s.luckyBonus=(s.luckyBonus||0)+15}},
+  {id:'adrenaline',name:'ADRENALINE',get desc(){return`+${ngScale(10)} Power, +${ngScale(20)} integrity`;},apply:s=>{const pw=ngScale(10);const hp=ngScale(20);s.powerLevel=Math.min(ngPowerCap(),s.powerLevel+pw);s.hp=Math.min(s.maxHp,s.hp+hp);}},
 ];
 
 // ═══════════════════════════════════════════
@@ -538,7 +577,7 @@ let G = {
   equippedWeapon:'smg',
   ownedWeapons:['fists','smg'],
   inventory:{}, // consumable id -> qty
-  shopBought:{}, // consumable id -> qty bought this shop visit
+  shopBought:{}, // location -> {consumable id -> qty bought} per outpost
   position:0,
   lastCheckpoint:0,
   phase:'shop',
@@ -555,8 +594,11 @@ let G = {
   lastItemUse:null, // {id, c, snapshot} — single-use undo for combat screen
   difficulty:'normal',
   ngPlusLevel:0,
+  bossHp:0,
+  bossMaxHp:3,
   tutorialDone:false,
   tutorialEncounters:0,
+  regenImplant:false,
 };
 
 // ═══════════════════════════════════════════
@@ -584,16 +626,17 @@ document.addEventListener('click',e=>{
 });
 
 const BUFF_DESCRIPTIONS={
-  'SHIELDED':'Next defeat penalty is fully absorbed. One-time protection.',
+  'SHIELDED':'Next defeat or trap penalty is fully absorbed. One-time protection.',
   'EMP READY':'Next enemy has -30% effective power in combat.',
   'OVERDRIVE':'+15 Power Level permanently.',
-  'TRAUMA KIT':'Restored 40 integrity.',
-  'SCAVENGE':'+80 credits found.',
-  'HARDENED':'Next loss penalty absorbed by shield.',
-  'LUCKY SPIN':'Win odds +15% for next fight.',
+  'LUCKY +15%':'Win odds +15% for next fight.',
   'LUCKY':'Bonus win chance on next combat roulette.',
   'OVERCLOCK':'Temporary power boost active for next combat.',
   'ADRENALINE':'+10 Power, +20 integrity.',
+  // Debuffs
+  'WEAKENED':'Power reduced by 8 for next fight.',
+  'DRAINED':'Lose 5 credits per sector until next outpost.',
+  'JINXED':'Win odds -10% for next fight.',
 };
 
 // ═══════════════════════════════════════════
@@ -602,7 +645,7 @@ const BUFF_DESCRIPTIONS={
 const rng=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
 const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
 const weaponById=id=>WEAPONS.find(w=>w.id===id)||WEAPONS[0];
-const equippedWeapon=()=>weaponById(G.equippedWeapon);
+const equippedWeapon=()=>{const w=weaponById(G.equippedWeapon);return G.ngPlusLevel>0?{...w,power:ngScale(w.power)}:w;};
 
 function screenDamage(){
   const el=document.getElementById('dmgOverlay');
@@ -624,7 +667,7 @@ function addLog(msg,cls=''){
 
 function updateHUD(){
   const hpPct=(G.hp/G.maxHp)*100;
-  const plPct=Math.min(100,(G.powerLevel/100)*100);
+  const plPct=Math.min(100,(G.powerLevel/ngPowerCap())*100);
   const hpColor=hpPct>60?'var(--green)':hpPct>30?'var(--yellow)':'var(--red)';
   document.getElementById('hpVal').textContent=G.hp;
   document.getElementById('hpVal').style.color=hpColor;
@@ -632,7 +675,7 @@ function updateHUD(){
   document.getElementById('hpBar').style.background=hpColor;
   const totalPl=G.powerLevel+(G.tempPower||0);
   document.getElementById('plVal').textContent=G.tempPower>0?`${G.powerLevel}+${G.tempPower}`:G.powerLevel;
-  document.getElementById('plBar').style.width=Math.min(100,(totalPl/100)*100)+'%';
+  document.getElementById('plBar').style.width=Math.min(100,(totalPl/ngPowerCap())*100)+'%';
   document.getElementById('plBar').style.background=totalPl>=40?'var(--green)':totalPl>=20?'var(--yellow)':'var(--accent)';
   document.getElementById('credVal').textContent=G.credits;
   // header info
@@ -655,7 +698,7 @@ function updateHUD(){
   // Only skip powerups already represented by explicit state checks above
   const dupeNames=[];
   if(G.luckyBonus>0)dupeNames.push('LUCKY SPIN');
-  if(G.shielded)dupeNames.push('HARDENED');
+  if(G.shielded)dupeNames.push('SHIELDED');
   G.activePowerups.forEach(p=>{
     if(dupeNames.includes(p))return;
     buffs.push(p);
@@ -709,10 +752,11 @@ function renderMap(){
     const isBase=i===0, isCheck=CHECKPOINTS.includes(i)&&i>0, isBoss=i===BOSS_NODE;
     const visited=i<G.position, isCurrent=i===G.position;
     n.className='map-node'+(visited?' visited':'')+(isCurrent?' current':'')+(isBase?' basecamp':'')+(isCheck&&!isBase?' checkpoint':'')+(isBoss?' boss-node':'');
+    const isEncounter=!isBase&&!isBoss&&!isCheck;
     n.innerHTML=isBase?'🏠':isBoss?'💀':isCheck?'📡':visited?'✓':i===G.position?'●':'·';
     const lbl=document.createElement('div');
     lbl.className='node-num';
-    lbl.textContent=isBase?'BASE':isBoss?'BOSS':isCheck?'POST':i;
+    lbl.textContent=isBase?'BASE':isBoss?'BOSS':isCheck?'POST':isEncounter?i:'';
     n.appendChild(lbl);
     mn.appendChild(n);
   }
@@ -727,8 +771,9 @@ function setScreen(title,bodyHTML){
 // SHOP
 // ═══════════════════════════════════════════
 function renderShop(isOutpost=false, tab='weapons'){
-  if(G.phase!=='shop') G.shopBought={};
   G.phase='shop';
+  const shopLoc=G.position; // track purchases per location
+  if(!G.shopBought[shopLoc]) G.shopBought[shopLoc]={};
   const locName=isOutpost?`OUTPOST — SECTOR ${G.position}`:'BASECAMP';
   const locIcon=isOutpost?'📡':'🏠';
   updateHUD();renderMap();
@@ -768,13 +813,14 @@ function renderShop(isOutpost=false, tab='weapons'){
     const typeColors={MEDICAL:'var(--green)',COMBAT:'var(--red)',DEFENSE:'var(--blue)',TACTICAL:'var(--yellow)',UTILITY:'var(--accent2)',UPGRADE:'var(--purple)'};
     html+=`<div style="font-size:9px;color:var(--text3);letter-spacing:2px;margin-bottom:10px">SINGLE-USE ITEMS — ACTIVATE FROM INVENTORY BAR AT ANY TIME</div>`;
     html+=`<div class="shop-grid">`;
-    [...CONSUMABLES].sort((a,b)=>a.price-b.price).forEach(c=>{
+    [...CONSUMABLES].filter(c=>c.price>0&&(G.ngPlusLevel>0||c.unlockZone===undefined||G.position>=c.unlockZone||G.lastCheckpoint>=c.unlockZone)).sort((a,b)=>a.price-b.price).forEach(c=>{
       const qty=G.inventory[c.id]||0;
       const atMax=qty>=c.maxStack;
       const diff=DIFFICULTIES[G.difficulty]||DIFFICULTIES.normal;
       const ngShopMult=Math.pow(0.85,G.ngPlusLevel);
       const effectiveShopLimit=c.shopLimit?Math.max(1,Math.floor(c.shopLimit*diff.shopLimitMult*ngShopMult)):0;
-      const shopSoldOut=effectiveShopLimit&&(G.shopBought[c.id]||0)>=effectiveShopLimit;
+      const locBought=(G.shopBought[G.position]&&G.shopBought[G.position][c.id])||0;
+      const shopSoldOut=effectiveShopLimit&&locBought>=effectiveShopLimit;
       const canBuy=G.credits>=c.price&&!atMax&&!shopSoldOut;
       const tcolor=typeColors[c.type]||'var(--purple)';
       const btnLabel=atMax?'FULL':shopSoldOut?'SOLD OUT':'BUY';
@@ -782,7 +828,7 @@ function renderShop(isOutpost=false, tab='weapons'){
         ${qty>0?`<div class="item-qty-badge">×${qty} / ${c.maxStack}</div>`:''}
         <div style="font-size:22px;margin-bottom:6px">${c.icon}</div>
         <div class="item-name">${c.name}</div>
-        <div class="item-type" style="color:${tcolor}">${c.type} — SINGLE USE</div>
+        <div class="item-type" style="color:${tcolor}">${c.type}${c.type==='UPGRADE'?' — PERMANENT':' — SINGLE USE'}</div>
         <div class="item-desc">${c.desc}</div>
         <div class="item-effect">${c.effect}</div>
         <div class="item-price">◈ ${c.price}
@@ -828,13 +874,22 @@ function buyItem(id){
     const diff=DIFFICULTIES[G.difficulty]||DIFFICULTIES.normal;
     const ngShopMult=Math.pow(0.85,G.ngPlusLevel);
     const effectiveLimit=Math.max(1,Math.floor(c.shopLimit*diff.shopLimitMult*ngShopMult));
-    const bought=G.shopBought[id]||0;
+    if(!G.shopBought[G.position]) G.shopBought[G.position]={};
+    const bought=G.shopBought[G.position][id]||0;
     if(bought>=effectiveLimit){addLog(`${c.name} — shop limit reached. Try the next outpost.`,'warn');return;}
-    G.shopBought[id]=bought+1;
+    G.shopBought[G.position][id]=bought+1;
   }
   G.credits-=c.price;
-  G.inventory[id]=(qty+1);
-  addLog(`Purchased ${c.name} ×1. Now carrying ×${G.inventory[id]}.`,'good');
+  // Scav Kit: use immediately on purchase instead of going to inventory
+  if(id==='scavkit'){
+    const msg=c.apply(G);
+    addLog(`Purchased & opened ${c.name}. ${msg}`,'good');
+    const amt=msg.match(/\+(\d+)/);
+    showScavResult(amt?parseInt(amt[1]):0);
+  } else {
+    G.inventory[id]=(qty+1);
+    addLog(`Purchased ${c.name} ×1. Now carrying ×${G.inventory[id]}.`,'good');
+  }
   updateHUD();
   renderShop(G.position>0,'items');
 }
@@ -905,6 +960,39 @@ function renderNav(){
 
   if(G.position>=DUNGEON_LENGTH){renderWin();return;}
 
+  // Boss node — show warning screen instead of mystery rooms
+  if(G.position===BOSS_NODE){
+    const w=equippedWeapon();
+    const myPower=G.powerLevel+(G.tempPower||0)+w.power;
+    const diff=DIFFICULTIES[G.difficulty]||DIFFICULTIES.normal;
+    let html=`
+    <div class="endscreen fade-in">
+      <div style="font-size:52px;margin-bottom:8px">💀</div>
+      <div class="end-title" style="font-size:24px;color:var(--red);letter-spacing:6px">BOSS SECTOR DETECTED</div>
+      <div style="color:var(--text3);font-size:9px;letter-spacing:4px;margin:8px 0 16px">OMEGA-CLASS HOSTILE AHEAD</div>
+
+      <div style="background:var(--bg3);border:1px solid var(--red);padding:14px 16px;max-width:420px;margin:0 auto 16px;text-align:left">
+        <div style="font-size:8px;letter-spacing:3px;color:var(--red);margin-bottom:10px">⚠ THREAT ASSESSMENT</div>
+        <div style="font-size:10px;color:var(--text2);line-height:1.8">
+          <div>DIFFICULTY: <span style="color:${diff.color};font-family:Orbitron,monospace">${diff.label}</span>${G.ngPlusLevel>0?` <span style="color:var(--purple)">NG+${G.ngPlusLevel}</span>`:''}</div>
+          <div>YOUR POWER: <span style="color:var(--blue);font-family:Orbitron,monospace">${myPower}</span></div>
+          <div>INTEGRITY: <span style="color:${G.hp>60?'var(--green)':G.hp>30?'var(--yellow)':'var(--red)'};font-family:Orbitron,monospace">${G.hp} / ${G.maxHp}</span></div>
+          <div>WEAPON: <span style="color:var(--text)">${w.icon} ${w.name} (+${w.power})</span></div>
+        </div>
+        <div style="margin-top:10px;font-size:9px;color:var(--yellow);letter-spacing:2px;padding:6px 10px;border:1px solid rgba(232,197,58,0.2);background:rgba(232,197,58,0.05)">
+          BOSS HAS 3 HEALTH PHASES — WIN 3 ROULETTES TO DEFEAT<br>
+          LOSSES STILL DEAL PENALTIES — THERE IS NO RETREAT
+        </div>
+      </div>
+
+      <div class="btn-row" style="justify-content:center;gap:12px">
+        <button class="btn btn-red" onclick="enterBossFight()" style="padding:14px 28px;font-size:12px;letter-spacing:4px">⚡ ENTER BOSS SECTOR</button>
+      </div>
+    </div>`;
+    setScreen('// ⚠ BOSS SECTOR — FINAL ENCOUNTER',html);
+    return;
+  }
+
   // Build 3 mystery rooms
   const rooms=buildRooms();
   const labels=['ALPHA','BETA','GAMMA'];
@@ -923,6 +1011,12 @@ function renderNav(){
   setScreen(`// NAVIGATION — FLOOR ${G.position}`,html);
   // Store rooms in window temp
   window._rooms=rooms;
+}
+
+function enterBossFight(){
+  G.bossMaxHp=3;
+  G.bossHp=G.bossMaxHp;
+  spawnEnemy(true);
 }
 
 function buildRooms(){
@@ -952,7 +1046,7 @@ function enterRoom(idx){
     const g=rng(20,60);
     const pl=rng(2,8);
     G.credits+=g;G.totalCredits+=g;
-    G.powerLevel=clamp(G.powerLevel+pl,0,100);
+    G.powerLevel=clamp(G.powerLevel+pl,0,ngPowerCap());
     addLog(`Supply cache! +${g} credits, +${pl} power.`,'good');
     updateHUD();
     showEvent('SUPPLY CACHE',`+${g} CREDITS  +${pl} POWER LEVEL`,'📦','var(--yellow)',()=>{G.position=clamp(G.position+1,0,DUNGEON_LENGTH-1);renderNav();});
@@ -961,6 +1055,7 @@ function enterRoom(idx){
   if(type==='trap'){
     if(G.shielded){
       G.shielded=false;
+      G.activePowerups=G.activePowerups.filter(p=>p!=='SHIELDED');
       addLog('Blast Shield absorbed the anomaly trap!','info');
       updateHUD();
       showEvent('ANOMALY TRAP',`BLAST SHIELD ABSORBED`,'🛡️','var(--blue)',()=>{G.position=clamp(G.position+1,0,DUNGEON_LENGTH-1);renderNav();});
@@ -996,8 +1091,8 @@ function showEvent(title,sub,icon,color,cb){
 // ═══════════════════════════════════════════
 // Scale multiplier: power grows steeply toward end
 function zonePowerMult(pos){
-  // Increases non-linearly: 1.0 at zone 1, ~3.5 at zone 19
-  return 1.0 + (pos/19)*2.8;
+  // Softer curve: 1.0 at zone 1, ~3.2 at zone 16
+  return 1.0 + (pos/BOSS_NODE)*2.2;
 }
 
 function spawnEnemy(boss=false){
@@ -1027,7 +1122,7 @@ function spawnEnemy(boss=false){
 
   G.currentEnemy={
     ...base,
-    credits:Math.round(rng(base.credits[0],base.credits[1])*diff.creditMult),
+    credits:Math.round(rng(base.credits[0],base.credits[1])*diff.creditMult*(1.0+G.ngPlusLevel*0.08)),
     scaledPower,
   };
   addLog(`HOSTILE CONTACT: ${G.currentEnemy.name} [PWR: ${scaledPower}]`,'bad');
@@ -1108,6 +1203,15 @@ function renderCombat(){
         <span class="power-val" style="color:${tierColor}">${effectivePower}${G.empActive?`<span style="font-size:10px;color:var(--blue)"> ↓EMP</span>`:''}</span>
         <span class="power-label">POWER</span>
       </div>
+      ${G.bossHp>0?`
+      <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px">
+        <div style="font-size:8px;letter-spacing:2px;color:var(--red);margin-bottom:4px">BOSS HEALTH — ${G.bossHp} / ${G.bossMaxHp} PHASES</div>
+        <div style="height:10px;background:var(--bg);overflow:hidden;border:1px solid var(--border)">
+          <div style="height:100%;width:${(G.bossHp/G.bossMaxHp)*100}%;background:var(--red);transition:width 0.5s"></div>
+        </div>
+        <div style="font-size:8px;color:var(--text3);margin-top:4px;letter-spacing:1px">WIN ${G.bossHp} MORE ROULETTE${G.bossHp>1?'S':''} TO DEFEAT</div>
+      </div>
+      `:''}
     </div>
   </div>
   <div style="background:var(--bg3);border:1px solid var(--border);padding:12px 14px;margin-bottom:10px">
@@ -1121,7 +1225,7 @@ function renderCombat(){
     ${activeBonuses.length?`<div style="font-size:9px;margin-top:8px;display:flex;gap:12px;flex-wrap:wrap">${activeBonuses.join('')}</div>`:''}
     <div style="font-size:9px;color:var(--text3);margin-top:6px">${e.desc}</div>
   </div>
-  <div class="btn-row">
+  <div class="btn-row" style="justify-content:center">
     <button class="btn btn-accent" onclick="startCombatSpin()">⚡ ENGAGE ROULETTE</button>
     ${G.tutorialDone!==false?'<button class="btn btn-red" onclick="startRetreatSpin()">↩ RETREAT</button>':''}
   </div>`;
@@ -1138,7 +1242,13 @@ function startCombatSpin(){
   G.lastItemUse=null;
   renderSpinScreen();
 }
+let retreatWarningShown=false;
+
 function startRetreatSpin(){
+  if(!retreatWarningShown){
+    document.getElementById('confirmOverlay').style.display='flex';
+    return;
+  }
   itemQueue={};
   G.spinType='retreat';
   G.lastItemUse=null;
@@ -1146,56 +1256,152 @@ function startRetreatSpin(){
   renderSpinScreen();
 }
 
+function confirmRetreat(){
+  retreatWarningShown=true;
+  document.getElementById('confirmOverlay').style.display='none';
+  startRetreatSpin();
+}
+
+function cancelRetreat(){
+  document.getElementById('confirmOverlay').style.display='none';
+}
+
+function showScavResult(credits){
+  const overlay=document.getElementById('confirmOverlay');
+  overlay.querySelector('.confirm-box').innerHTML=`
+    <div class="confirm-title" style="color:var(--yellow)">📦 SCAV KIT OPENED</div>
+    <div style="font-size:36px;font-family:'Orbitron',monospace;color:var(--yellow);letter-spacing:4px;margin:16px 0">+${credits} CR</div>
+    <div class="confirm-btns">
+      <button class="btn btn-accent" onclick="closeScavResult()">CONTINUE</button>
+    </div>`;
+  overlay.style.display='flex';
+}
+
+let _unlockCb=null;
+function showUnlockPopup(items,cb){
+  _unlockCb=cb;
+  const overlay=document.getElementById('confirmOverlay');
+  const itemsHtml=items.map(c=>{
+    const tcolor=c.type==='MEDICAL'?'var(--green)':c.type==='COMBAT'?'var(--red)':c.type==='DEFENSE'?'var(--blue)':c.type==='TACTICAL'?'var(--yellow)':c.type==='UPGRADE'?'var(--purple)':'var(--text)';
+    return `<div style="background:var(--bg3);border:1px solid var(--border);padding:10px 12px;text-align:left">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <span style="font-size:18px">${c.icon}</span>
+        <span style="font-family:'Orbitron',monospace;font-size:11px;color:var(--text)">${c.name}</span>
+        <span style="font-size:8px;letter-spacing:2px;color:${tcolor}">${c.type}</span>
+      </div>
+      <div style="font-size:9px;color:var(--text2);line-height:1.5">${c.effect}</div>
+      <div style="font-size:10px;color:var(--yellow);margin-top:4px;font-family:'Orbitron',monospace">◈ ${c.price}</div>
+    </div>`;
+  }).join('');
+  overlay.querySelector('.confirm-box').innerHTML=`
+    <div class="confirm-title" style="color:var(--green)">🔓 NEW ITEMS UNLOCKED</div>
+    <div style="font-size:9px;letter-spacing:3px;color:var(--text3);margin-bottom:14px">OUTPOST ${G.position} INVENTORY</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px">${itemsHtml}</div>
+    <div class="confirm-btns">
+      <button class="btn btn-accent" onclick="closeUnlockPopup()">OPEN SHOP →</button>
+    </div>`;
+  overlay.style.display='flex';
+}
+
+function closeUnlockPopup(){
+  document.getElementById('confirmOverlay').style.display='none';
+  restoreConfirmOverlay();
+  if(_unlockCb){_unlockCb();_unlockCb=null;}
+}
+
+function restoreConfirmOverlay(){
+  document.getElementById('confirmOverlay').querySelector('.confirm-box').innerHTML=`
+    <div class="confirm-title">⚠ RETREAT WARNING</div>
+    <div class="confirm-desc">
+      Retreating forces you through a <span style="color:var(--red)">PENALTY ROULETTE</span> that deals integrity damage.<br><br>
+      The further you progress through the dungeon, the <span style="color:var(--red)">MORE SEVERE</span> the retreat penalties become.
+    </div>
+    <div class="confirm-warn">PENALTY SCALES WITH SECTOR DEPTH</div>
+    <div class="confirm-btns">
+      <button class="btn btn-red" onclick="confirmRetreat()">↩ RETREAT ANYWAY</button>
+      <button class="btn btn-blue" onclick="cancelRetreat()">✕ CANCEL</button>
+    </div>`;
+}
+
+function closeScavResult(){
+  document.getElementById('confirmOverlay').style.display='none';
+  restoreConfirmOverlay();
+}
+
 function buildCombatSegments(){
   const winChance=getWinChance();
   const e=G.currentEnemy;
-  const plGain=rng(5,12);
-  const creditGain=e.credits;
+  const plGain=ngScale(rng(5,12));
+  const creditGain=ngScale(e.credits);
   const pu=POWERUPS_COMBAT[rng(0,POWERUPS_COMBAT.length-1)];
   const winSegs=Math.max(1,Math.min(10,Math.round(12*winChance/100)));
   const loseSegs=12-winSegs;
   const segs=[];
+  // Win segments: brightest green = best outcome, darker green = lesser
   const winPool=[
-    {icon:'◈',label:`+${creditGain}CR`,sub:'CREDITS',color:'#0d2518',stroke:'#2de08a',outcome:'credits',value:creditGain},
-    {icon:'⚡',label:`+${plGain} PWR`,sub:'POWER',color:'#0a1a10',stroke:'#2de08a',outcome:'power',value:plGain},
-    {icon:'⭐',label:'POWER UP',sub:'BONUS',color:'#1a0d2e',stroke:'#a04ae8',outcome:'powerup',pu},
-    ...(G.tutorialDone!==false?[{icon:'→',label:'+4 SECTORS',sub:'ADVANCE',color:'#0d1a2e',stroke:'#3a8ae8',outcome:'advance'}]:[]),
-    {icon:'◈',label:`+${creditGain}CR`,sub:'CREDITS',color:'#0d2518',stroke:'#2de08a',outcome:'credits',value:creditGain},
-    {icon:'⚡',label:`+${plGain} PWR`,sub:'POWER',color:'#0a1a10',stroke:'#2de08a',outcome:'power',value:plGain},
+    {icon:'◈',label:`+${creditGain}CR`,sub:'CREDITS',color:'#0c1a0e',stroke:'#48c760',outcome:'credits',value:creditGain},
+    {icon:'⚡',label:`+${plGain} PWR`,sub:'POWER',color:'#0e200f',stroke:'#6edd82',outcome:'power',value:plGain},
+    {icon:'⭐',label:'POWER UP',sub:'BONUS',color:'#102810',stroke:'#98f0a0',outcome:'powerup',pu},
+    ...(G.tutorialDone!==false?[{icon:'→',label:'+4 SECTORS',sub:'ADVANCE',color:'#143014',stroke:'#c0ffc8',outcome:'advance'}]:[]),
+    {icon:'◈',label:`+${creditGain}CR`,sub:'CREDITS',color:'#0c1a0e',stroke:'#48c760',outcome:'credits',value:creditGain},
+    {icon:'⚡',label:`+${plGain} PWR`,sub:'POWER',color:'#0e200f',stroke:'#6edd82',outcome:'power',value:plGain},
   ];
-  // Loss pool — all map to 'loseint' to trigger the separate defeat roulette
-  const losePool=[
-    {icon:'✗',label:'DEFEAT',sub:'PENALTY',color:'#2e0d0d',stroke:'#e83a3a',outcome:'loseint'},
-    {icon:'✗',label:'DEFEAT',sub:'PENALTY',color:'#2e0d0d',stroke:'#e83a3a',outcome:'loseint'},
-    {icon:'✗',label:'DEFEAT',sub:'PENALTY',color:'#2e0d0d',stroke:'#e83a3a',outcome:'loseint'},
-    {icon:'✗',label:'DEFEAT',sub:'PENALTY',color:'#2e0d0d',stroke:'#e83a3a',outcome:'loseint'},
-    {icon:'✗',label:'DEFEAT',sub:'PENALTY',color:'#2e0d0d',stroke:'#e83a3a',outcome:'loseint'},
-    {icon:'✗',label:'DEFEAT',sub:'PENALTY',color:'#2e0d0d',stroke:'#e83a3a',outcome:'loseint'},
-  ];
+  // Loss pool: build actual penalties inline (orange→red by severity)
+  const lossSegs=buildLossSegments();
+  // Pick loseSegs from the pre-built loss segments, cycling if needed
+  const losePool=[];
+  for(let i=0;i<loseSegs;i++) losePool.push(lossSegs[i%lossSegs.length]);
+
   for(let i=0;i<winSegs;i++) segs.push(winPool[i%winPool.length]);
-  for(let i=0;i<loseSegs;i++) segs.push(losePool[i%losePool.length]);
+  for(let i=0;i<loseSegs;i++) segs.push(losePool[i]);
   for(let i=segs.length-1;i>0;i--){const j=rng(0,i);[segs[i],segs[j]]=[segs[j],segs[i]];}
   return segs;
+}
+
+function applyDrainedIfActive(){
+  if(G.activePowerups.includes('DRAINED')){
+    G.credits=Math.max(0,G.credits-5);
+    addLog('DRAINED: -5 credits this sector.','bad');
+    updateHUD();
+  }
 }
 
 function clearCombatBuffs(){
   G.tempPower=0;
   G.luckyBonus=0;
   G.empActive=false;
+  // Remove temporary buff names from activePowerups
+  const tempBuffNames=['SHIELDED','LUCKY +15%','ADRENALINE'];
+  G.activePowerups=G.activePowerups.filter(p=>!tempBuffNames.includes(p));
+  // Remove debuffs too
+  G.activePowerups=G.activePowerups.filter(p=>!p.startsWith('WEAKENED')&&!p.startsWith('DRAINED')&&!p.startsWith('JINXED'));
 }
 
 function buildRetreatSegments(){
+  // Scale retreat penalty based on checkpoint zone: zone 0-4=tier1, 5-9=tier2, 10-14=tier3, 15+=tier4
+  const pos=G.position;
+  const zone=pos>=15?4:pos>=10?3:pos>=5?2:1;
+  // Base values scale with zone: tier1=[3-7], tier2=[6-12], tier3=[10-18], tier4=[15-25]
+  const tiers={
+    1:{graze:[3,5],minor:[5,7],hurt:[6,8],moderate:[7,10],heavy:[9,12]},
+    2:{graze:[5,8],minor:[7,10],hurt:[9,12],moderate:[10,14],heavy:[13,17]},
+    3:{graze:[8,12],minor:[10,14],hurt:[12,16],moderate:[14,20],heavy:[18,24]},
+    4:{graze:[10,15],minor:[14,18],hurt:[16,22],moderate:[20,28],heavy:[25,35]},
+  };
+  const t=tiers[zone];
+  const g=rng(t.graze[0],t.graze[1]),mi=rng(t.minor[0],t.minor[1]),hu=rng(t.hurt[0],t.hurt[1]);
+  const mo=rng(t.moderate[0],t.moderate[1]),hv=rng(t.heavy[0],t.heavy[1]);
   const entries=[
-    {icon:'💔',label:'-5 INT', sub:'GRAZE',    color:'#141208',stroke:'#e8c53a',outcome:'retreatdmg',value:5},
-    {icon:'💔',label:'-8 INT', sub:'MINOR',    color:'#1c1408',stroke:'#e8c53a',outcome:'retreatdmg',value:8},
-    {icon:'💔',label:'-5 INT', sub:'GRAZE',    color:'#141208',stroke:'#e8c53a',outcome:'retreatdmg',value:5},
-    {icon:'💔',label:'-10 INT',sub:'HURT',     color:'#2a1208',stroke:'#e8632a',outcome:'retreatdmg',value:10},
-    {icon:'💔',label:'-6 INT', sub:'MINOR',    color:'#1c1408',stroke:'#e8c53a',outcome:'retreatdmg',value:6},
-    {icon:'💔',label:'-12 INT',sub:'MODERATE', color:'#2a1208',stroke:'#e8632a',outcome:'retreatdmg',value:12},
-    {icon:'💔',label:'-5 INT', sub:'GRAZE',    color:'#141208',stroke:'#e8c53a',outcome:'retreatdmg',value:5},
-    {icon:'💀',label:'-15 INT',sub:'HEAVY',    color:'#2e0d0d',stroke:'#e83a3a',outcome:'retreatdmg',value:15},
-    {icon:'💔',label:'-8 INT', sub:'MINOR',    color:'#1c1408',stroke:'#e8c53a',outcome:'retreatdmg',value:8},
-    {icon:'💔',label:'-10 INT',sub:'HURT',     color:'#2a1208',stroke:'#e8632a',outcome:'retreatdmg',value:10},
+    {icon:'💔',label:`-${g} INT`, sub:'GRAZE',    color:'#1a1608',stroke:'#e8c53a',outcome:'retreatdmg',value:g},
+    {icon:'💔',label:`-${mi} INT`,sub:'MINOR',    color:'#1e1208',stroke:'#e8a830',outcome:'retreatdmg',value:mi},
+    {icon:'💔',label:`-${g} INT`, sub:'GRAZE',    color:'#1a1608',stroke:'#e8c53a',outcome:'retreatdmg',value:g},
+    {icon:'💔',label:`-${hu} INT`,sub:'HURT',     color:'#241008',stroke:'#e87828',outcome:'retreatdmg',value:hu},
+    {icon:'💔',label:`-${mi} INT`,sub:'MINOR',    color:'#1e1208',stroke:'#e8a830',outcome:'retreatdmg',value:mi},
+    {icon:'💔',label:`-${mo} INT`,sub:'MODERATE', color:'#2a0c08',stroke:'#e85020',outcome:'retreatdmg',value:mo},
+    {icon:'💔',label:`-${g} INT`, sub:'GRAZE',    color:'#1a1608',stroke:'#e8c53a',outcome:'retreatdmg',value:g},
+    {icon:'💀',label:`-${hv} INT`,sub:'HEAVY',    color:'#300808',stroke:'#e01010',outcome:'retreatdmg',value:hv},
+    {icon:'💔',label:`-${mi} INT`,sub:'MINOR',    color:'#1e1208',stroke:'#e8a830',outcome:'retreatdmg',value:mi},
+    {icon:'💔',label:`-${hu} INT`,sub:'HURT',     color:'#241008',stroke:'#e87828',outcome:'retreatdmg',value:hu},
   ];
   for(let i=entries.length-1;i>0;i--){const j=rng(0,i);[entries[i],entries[j]]=[entries[j],entries[i]];}
   return entries;
@@ -1207,27 +1413,27 @@ function buildLossSegments(){
   const credLose=isRook?rng(5,15):rng(35,75);
   const intLose=isRook?rng(5,12):rng(25,45);
 
-  // Light penalties (yellow)
+  // Light penalties (yellow — mildest)
   const light=[
-    {icon:'💔',label:`-${intLose} INT`,  sub:'INTEGRITY', color:'#141208',stroke:'#e8c53a',outcome:'loseint',  value:intLose},
-    {icon:'⚡',label:`-${plLose} PWR`,    sub:'POWER',     color:'#141208',stroke:'#e8c53a',outcome:'losepower',value:plLose},
-    {icon:'◈', label:`-${credLose}CR`,    sub:'CREDITS',   color:'#1c1408',stroke:'#e8c53a',outcome:'losecreds',value:credLose},
-    {icon:'💔',label:`-${intLose} INT`,   sub:'INTEGRITY', color:'#1c1408',stroke:'#e8c53a',outcome:'loseint',  value:intLose},
-    {icon:'⚡',label:`-${plLose} PWR`,    sub:'POWER',     color:'#141208',stroke:'#e8c53a',outcome:'losepower',value:plLose},
+    {icon:'💔',label:`-${intLose} INT`,  sub:'INTEGRITY', color:'#1a1608',stroke:'#e8c53a',outcome:'loseint',  value:intLose},
+    {icon:'⚡',label:`-${plLose} PWR`,    sub:'POWER',     color:'#1e1408',stroke:'#e8b030',outcome:'losepower',value:plLose},
+    {icon:'◈', label:`-${credLose}CR`,    sub:'CREDITS',   color:'#1e1208',stroke:'#e8a830',outcome:'losecreds',value:credLose},
+    {icon:'🔻',label:'WEAKENED',          sub:'-8 PWR',    color:'#1c1408',stroke:'#e8b830',outcome:'debuff',debuff:'weakened'},
+    {icon:'🎲',label:'JINXED',            sub:'-10% ODDS', color:'#1a1608',stroke:'#e8c53a',outcome:'debuff',debuff:'jinxed'},
   ];
   // Medium penalties (orange)
   const medIntLose=isRook?rng(10,18):credLose+25;
   const medium=[
-    {icon:'📡',label:'CHECKPOINT',        sub:'SET BACK',  color:'#2a1208',stroke:'#e8632a',outcome:'checkpoint'},
-    {icon:'◈', label:`-${isRook?rng(12,22):credLose+25}CR`, sub:'CREDITS',   color:'#2a1208',stroke:'#e8632a',outcome:'losecreds',value:isRook?rng(12,22):credLose+25},
-    {icon:'📡',label:'CHECKPOINT',        sub:'SET BACK',  color:'#2a1208',stroke:'#e8632a',outcome:'checkpoint'},
+    {icon:'📡',label:'CHECKPOINT',        sub:'SET BACK',  color:'#260e08',stroke:'#e86828',outcome:'checkpoint'},
+    {icon:'◈', label:`-${isRook?rng(12,22):credLose+25}CR`, sub:'CREDITS',   color:'#240e08',stroke:'#e87828',outcome:'losecreds',value:isRook?rng(12,22):credLose+25},
+    {icon:'💸',label:'DRAINED',           sub:'LOSE CR/SEC',color:'#260e08',stroke:'#e87028',outcome:'debuff',debuff:'drained'},
   ];
-  // Heavy penalties (red)
+  // Heavy penalties (red — harshest)
   const heavyInt=isRook?rng(15,25):Math.round(intLose*1.4);
   const heavyPl=isRook?rng(6,10):plLose+8;
   const heavy=[
-    {icon:'💔',label:`-${heavyInt} INT`, sub:'INTEGRITY', color:'#2e0d0d',stroke:'#e83a3a',outcome:'loseint',  value:heavyInt},
-    {icon:'⚡',label:`-${heavyPl} PWR`,  sub:'POWER',     color:'#2e0d0d',stroke:'#e83a3a',outcome:'losepower',value:heavyPl},
+    {icon:'💔',label:`-${heavyInt} INT`, sub:'INTEGRITY', color:'#300808',stroke:'#e01818',outcome:'loseint',  value:heavyInt},
+    {icon:'⚡',label:`-${heavyPl} PWR`,  sub:'POWER',     color:'#2e0a08',stroke:'#e02020',outcome:'losepower',value:heavyPl},
   ];
 
   let entries;
@@ -1253,11 +1459,9 @@ let _spinRafId=null;
 function renderSpinScreen(){
   G.phase='spin';
   const isCombat=G.spinType==='combat';
-  const isLoss=G.spinType==='loss';
   const isRetreat=G.spinType==='retreat';
 
   if(isCombat) _spinSegs=buildCombatSegments();
-  else if(isLoss) _spinSegs=buildLossSegments();
   else _spinSegs=buildRetreatSegments();
 
   const winChance=isCombat?getWinChance():null;
@@ -1265,15 +1469,12 @@ function renderSpinScreen(){
   if(isCombat){
     titleStr='COMBAT ROULETTE';
     subStr=`WIN CHANCE: <span style="color:${winChance>=50?'var(--green)':'var(--red)'};font-family:Orbitron,monospace">${winChance}%</span> — POWER DETERMINES ODDS`;
-  } else if(isLoss){
-    titleStr='DEFEAT PENALTY';
-    subStr='YOU LOST THE ENGAGEMENT — SPIN FOR YOUR PUNISHMENT';
   } else {
     titleStr='RETREAT PENALTY';
     subStr='FLEEING THE FIELD — TAKE YOUR DAMAGE';
   }
 
-  setScreen(isCombat?'// COMBAT ROULETTE':isLoss?'// DEFEAT — PENALTY ROULETTE':'// RETREAT PENALTY',`
+  setScreen(isCombat?'// COMBAT ROULETTE':'// RETREAT PENALTY',`
     <div class="roulette-container fade-in">
       <div class="spin-info">
         <div class="spin-title">${titleStr}</div>
@@ -1406,113 +1607,225 @@ function resolveOutcome(idx){
     return;
   }
 
-  if(G.spinType==='loss'){
-    // Defeat penalty roulette
-    const shielded=G.shielded;
-    G.shielded=false;
-    clearCombatBuffs();
-    const out=seg.outcome;
-    let bigText, bigColor, subText;
-
-    if(shielded){
-      bigText='SHIELDED';bigColor='var(--blue)';subText='BLAST SHIELD ABSORBED PENALTY';
-      addLog('Blast Shield absorbed the defeat penalty!','info');
-    } else if(out==='loseint'){
-      const v=seg.value;
-      G.hp=clamp(G.hp-v,0,G.maxHp);
-      screenDamage();
-      bigText=`-${v} INT`;bigColor='var(--red)';subText='INTEGRITY DAMAGE';
-      addLog(`Defeat penalty: -${v} integrity.`,'bad');
-    } else if(out==='losepower'){
-      const v=seg.value;
-      G.powerLevel=clamp(G.powerLevel-v,1,100);
-      bigText=`-${v} PWR`;bigColor='var(--accent)';subText='POWER LEVEL DRAINED';
-      addLog(`Defeat penalty: -${v} power level.`,'bad');
-    } else if(out==='losecreds'){
-      const v=seg.value;
-      G.credits=clamp(G.credits-v,0,9999);
-      bigText=`-${v}CR`;bigColor='var(--yellow)';subText='CREDITS SEIZED';
-      addLog(`Defeat penalty: -${v} credits taken.`,'bad');
-    } else if(out==='checkpoint'){
-      G.position=G.lastCheckpoint;
-      bigText='CHECKPOINT';bigColor='var(--purple)';subText=`SENT BACK TO SECTOR ${G.lastCheckpoint}`;
-      addLog(`Defeat penalty: sent back to checkpoint at sector ${G.lastCheckpoint}.`,'bad');
-      renderMap();
-    }
-
-    updateHUD();
-    const res=document.getElementById('spinResult');
-    if(res) res.innerHTML=`<div class="result-splash fade-in">
-      <div class="result-big" style="color:${bigColor}">${bigText}</div>
-      <div class="result-sub">${subText}</div>
-      <div class="btn-row" style="justify-content:center;margin-top:14px">
-        ${G.hp>0?`<button class="btn btn-accent" onclick="${!G.tutorialDone?'afterTutorialCombat()':'afterLoss()'}">CONTINUE →</button>`:''}
-      </div>
-    </div>`;
-    if(G.hp<=0)setTimeout(renderDead,1000);
-    return;
-  }
-
-  // ─── WIN/LOSE COMBAT ROULETTE ───
+  // ─── COMBAT ROULETTE (WIN + LOSS on same wheel) ───
   clearCombatBuffs();
   const out=seg.outcome;
+
+  const isBossFight=G.bossHp>0;
+  const isWinOutcome=out==='credits'||out==='power'||out==='powerup'||out==='advance';
+
+  // Regen Implant: heal on combat win
+  function applyRegen(){
+    if(G.regenImplant){
+      const rv=ngScale(15);
+      G.hp=Math.min(G.maxHp,G.hp+rv);
+      addLog(`Regen Implant — +${rv} integrity.`,'good');
+    }
+  }
+
+  if(isWinOutcome&&isBossFight){
+    // Boss fight: reduce boss HP, apply reward, then continue fighting if boss alive
+    G.bossHp--;
+    // Still grant the reward
+    if(out==='credits'){
+      const v=seg.value;G.credits+=v;G.totalCredits+=v;
+      addLog(`HIT! +${v} credits. Boss phase ${G.bossMaxHp-G.bossHp}/${G.bossMaxHp} complete.`,'good');
+    } else if(out==='power'){
+      const v=seg.value;G.powerLevel=clamp(G.powerLevel+v,0,ngPowerCap());
+      addLog(`HIT! +${v} power. Boss phase ${G.bossMaxHp-G.bossHp}/${G.bossMaxHp} complete.`,'good');
+    } else if(out==='powerup'){
+      const pu=seg.pu||POWERUPS_COMBAT[rng(0,POWERUPS_COMBAT.length-1)];
+      pu.apply(G);
+      const instantPowerups=['medkit','scavenge','adrenaline'];
+      if(!instantPowerups.includes(pu.id)) G.activePowerups.push(pu.name);
+      addLog(`HIT! ${pu.name} — ${pu.desc}. Boss phase ${G.bossMaxHp-G.bossHp}/${G.bossMaxHp}.`,'good');
+    } else if(out==='advance'){
+      // Advance doesn't apply for boss, just counts as a hit
+      addLog(`HIT! Boss phase ${G.bossMaxHp-G.bossHp}/${G.bossMaxHp} complete.`,'good');
+    }
+    G.kills++;
+    applyRegen();
+    updateHUD();
+
+    if(G.bossHp<=0){
+      // Boss defeated!
+      G.bossHp=0;
+      showSpinResult('BOSS DEFEATED','var(--green)',`${e.name} DESTROYED — ALL PHASES CLEARED`,true);
+    } else {
+      // Boss still alive — show phase result then re-spin
+      showSpinResult(`PHASE ${G.bossMaxHp-G.bossHp}/${G.bossMaxHp}`,'var(--green)',`${G.bossHp} PHASE${G.bossHp>1?'S':''} REMAINING — SPIN AGAIN`,'boss');
+    }
+    return;
+  }
 
   if(out==='credits'){
     const v=seg.value;
     G.credits+=v;G.totalCredits+=v;G.kills++;
     addLog(`VICTORY! +${v} credits. ${e.name} eliminated.`,'good');
+    applyRegen();
     updateHUD();
     showSpinResult(`+${v} CREDITS`,'var(--green)','ENEMY DEFEATED',true);
   } else if(out==='power'){
     const v=seg.value;
-    G.powerLevel=clamp(G.powerLevel+v,0,100);G.kills++;
+    G.powerLevel=clamp(G.powerLevel+v,0,ngPowerCap());G.kills++;
     addLog(`VICTORY! +${v} power level. ${e.name} destroyed.`,'good');
+    applyRegen();
     updateHUD();
     showSpinResult(`+${v} POWER`,'var(--accent)','POWER LEVEL GAINED',true);
   } else if(out==='powerup'){
     const pu=seg.pu||POWERUPS_COMBAT[rng(0,POWERUPS_COMBAT.length-1)];
     pu.apply(G);
-    G.activePowerups.push(pu.name);G.kills++;
+    const instantPowerups=['medkit','scavenge','adrenaline'];
+    if(!instantPowerups.includes(pu.id)) G.activePowerups.push(pu.name);
+    G.kills++;
     addLog(`VICTORY! Powerup: ${pu.name} — ${pu.desc}`,'good');
+    applyRegen();
     updateHUD();
     showSpinResult(pu.name,'var(--purple)',pu.desc,true);
   } else if(out==='advance'){
     const prevPos=G.position;
-    G.position=clamp(G.position+4,0,DUNGEON_LENGTH-1);G.kills++;
-    // Find any checkpoint the jump passed over or landed on
-    const crossed=CHECKPOINTS.filter(cp=>cp>prevPos&&cp<=G.position&&cp>0);
-    if(crossed.length){G.lastCheckpoint=crossed[crossed.length-1];}
-    addLog(`VICTORY! Advanced 4 sectors! Now at sector ${G.position}.`,'good');
+    const targetPos=clamp(G.position+4,0,DUNGEON_LENGTH-1);
+    G.kills++;
+    // If the jump crosses a checkpoint, stop at the first one to open shop
+    const crossed=CHECKPOINTS.filter(cp=>cp>prevPos&&cp<=targetPos&&cp>0);
+    if(crossed.length){
+      G.position=crossed[0]; // stop at first crossed checkpoint
+      G.lastCheckpoint=crossed[0];
+    } else {
+      G.position=targetPos;
+    }
+    addLog(`VICTORY! Advanced to sector ${G.position}!`,'good');
+    applyRegen();
     updateHUD();renderMap();
-    const subNote=crossed.length?` — OUTPOST ${crossed[crossed.length-1]} CROSSED`:'';
-    showSpinResult('+4 SECTORS','var(--blue)',`RAPID ADVANCE${subNote}`,'advance');
-  } else if(out==='back'||out==='losepower'||out==='losecreds'||out==='checkpoint'||out==='loseint'){
-    // Combat loss — trigger the defeat penalty roulette
-    G.kills; // no kill
-    addLog(`DEFEATED by ${e.name}! Spin the penalty roulette.`,'bad');
-    G.spinType='loss';
-    setTimeout(()=>{renderSpinScreen();},600);
+    const subNote=crossed.length?` — OUTPOST ${crossed[0]} REACHED`:'';
+    showSpinResult(`+${G.position-prevPos} SECTORS`,'var(--blue)',`RAPID ADVANCE${subNote}`,'advance');
+  } else if(out==='loseint'){
+    const v=seg.value;
+    const shielded=G.shielded;
+    G.shielded=false;
+    if(shielded){
+      addLog(`DEFEATED by ${e.name}! Blast Shield absorbed penalty.`,'info');
+      G.activePowerups=G.activePowerups.filter(p=>p!=='SHIELDED');
+      updateHUD();
+      showSpinResult('SHIELDED','var(--blue)',`${e.name} — PENALTY ABSORBED`,false);
+    } else {
+      G.hp=clamp(G.hp-v,0,G.maxHp);
+      screenDamage();
+      addLog(`DEFEATED by ${e.name}! Lost ${v} integrity.`,'bad');
+      updateHUD();
+      showSpinResult(`-${v} INT`,'var(--red)',`DEFEATED BY ${e.name}`,false);
+      if(G.hp<=0)setTimeout(renderDead,1200);
+    }
+  } else if(out==='losepower'){
+    const v=seg.value;
+    const shielded=G.shielded;
+    G.shielded=false;
+    if(shielded){
+      addLog(`DEFEATED by ${e.name}! Blast Shield absorbed penalty.`,'info');
+      G.activePowerups=G.activePowerups.filter(p=>p!=='SHIELDED');
+      updateHUD();
+      showSpinResult('SHIELDED','var(--blue)',`${e.name} — PENALTY ABSORBED`,false);
+    } else {
+      G.powerLevel=clamp(G.powerLevel-v,1,ngPowerCap());
+      addLog(`DEFEATED by ${e.name}! Lost ${v} power level.`,'bad');
+      updateHUD();
+      showSpinResult(`-${v} PWR`,'var(--red)',`DEFEATED BY ${e.name}`,false);
+    }
+  } else if(out==='losecreds'){
+    const v=seg.value;
+    const shielded=G.shielded;
+    G.shielded=false;
+    if(shielded){
+      addLog(`DEFEATED by ${e.name}! Blast Shield absorbed penalty.`,'info');
+      G.activePowerups=G.activePowerups.filter(p=>p!=='SHIELDED');
+      updateHUD();
+      showSpinResult('SHIELDED','var(--blue)',`${e.name} — PENALTY ABSORBED`,false);
+    } else {
+      G.credits=clamp(G.credits-v,0,99999);
+      addLog(`DEFEATED by ${e.name}! Lost ${v} credits.`,'bad');
+      updateHUD();
+      showSpinResult(`-${v} CR`,'var(--red)',`DEFEATED BY ${e.name}`,false);
+    }
+  } else if(out==='checkpoint'){
+    const shielded=G.shielded;
+    G.shielded=false;
+    if(shielded){
+      addLog(`DEFEATED by ${e.name}! Blast Shield absorbed penalty.`,'info');
+      G.activePowerups=G.activePowerups.filter(p=>p!=='SHIELDED');
+      updateHUD();
+      showSpinResult('SHIELDED','var(--blue)',`${e.name} — PENALTY ABSORBED`,false);
+    } else {
+      const prevCp=CHECKPOINTS.filter(c=>c<G.lastCheckpoint).sort((a,b)=>b-a)[0];
+      if(prevCp!==undefined){
+        G.lastCheckpoint=prevCp;
+        addLog(`DEFEATED by ${e.name}! Checkpoint set back to ${prevCp}.`,'bad');
+      } else {
+        addLog(`DEFEATED by ${e.name}! Checkpoint already at base.`,'bad');
+      }
+      updateHUD();renderMap();
+      showSpinResult('CHECKPOINT','var(--red)',`DEFEATED — SET BACK TO ${G.lastCheckpoint}`,false);
+    }
+  } else if(out==='debuff'){
+    const shielded=G.shielded;
+    G.shielded=false;
+    if(shielded){
+      addLog(`DEFEATED by ${e.name}! Blast Shield absorbed penalty.`,'info');
+      G.activePowerups=G.activePowerups.filter(p=>p!=='SHIELDED');
+      updateHUD();
+      showSpinResult('SHIELDED','var(--blue)',`${e.name} — PENALTY ABSORBED`,false);
+    } else {
+      const db=seg.debuff;
+      if(db==='weakened'){
+        G.tempPower=(G.tempPower||0)-8;
+        G.activePowerups.push('WEAKENED -8 PWR');
+        addLog(`DEFEATED by ${e.name}! Weakened — -8 power next fight.`,'bad');
+        updateHUD();
+        showSpinResult('WEAKENED','var(--red)',`DEFEATED — -8 POWER NEXT FIGHT`,false);
+      } else if(db==='jinxed'){
+        G.luckyBonus=(G.luckyBonus||0)-10;
+        G.activePowerups.push('JINXED -10%');
+        addLog(`DEFEATED by ${e.name}! Jinxed — -10% win odds next fight.`,'bad');
+        updateHUD();
+        showSpinResult('JINXED','var(--red)',`DEFEATED — -10% WIN ODDS NEXT FIGHT`,false);
+      } else if(db==='drained'){
+        G.activePowerups.push('DRAINED');
+        addLog(`DEFEATED by ${e.name}! Drained — losing credits each sector.`,'bad');
+        updateHUD();
+        showSpinResult('DRAINED','var(--red)',`DEFEATED — LOSE 5 CR PER SECTOR`,false);
+      }
+    }
   }
 }
 
 function showSpinResult(big,color,sub,win){
   const res=document.getElementById('spinResult');
   if(!res)return;
-  const continueHandler=(!G.tutorialDone)?'afterTutorialCombat()':'afterCombat(\''+win+'\')';
+  let continueHandler;
+  if(!G.tutorialDone) continueHandler='afterTutorialCombat()';
+  else if(win===false) continueHandler='afterLoss()';
+  else continueHandler=`afterCombat('${win}')`;
+  const showBtn=G.hp>0;
   res.innerHTML=`<div class="result-splash fade-in">
     <div class="result-big" style="color:${color}">${big}</div>
     <div class="result-sub">${sub}</div>
     <div class="btn-row" style="justify-content:center;margin-top:14px">
-      <button class="btn btn-accent" onclick="${continueHandler}">CONTINUE →</button>
+      ${showBtn?`<button class="btn btn-accent" onclick="${continueHandler}">CONTINUE →</button>`:''}
     </div>
   </div>`;
 }
 
 function afterCombat(win){
+  if(G.hp<=0){G.currentEnemy=null;renderDead();return;}
+  // Boss fight: 'boss' means boss still alive, re-enter combat
+  if(win==='boss'){
+    // Don't clear currentEnemy — same boss, re-render combat
+    renderCombat();
+    return;
+  }
   G.currentEnemy=null;
-  if(G.hp<=0){renderDead();return;}
   if(win===true||win==='true'){
     G.position=clamp(G.position+1,0,DUNGEON_LENGTH-1);
+    applyDrainedIfActive();
     renderMap();
   }
   // win==='advance': position already set by advance outcome, just check shop
@@ -1521,8 +1834,13 @@ function afterCombat(win){
 }
 
 function afterLoss(){
+  if(G.hp<=0){G.currentEnemy=null;renderDead();return;}
+  // Boss fight: losing a round doesn't end the fight
+  if(G.bossHp>0){
+    renderCombat();
+    return;
+  }
   G.currentEnemy=null;
-  if(G.hp<=0){renderDead();return;}
   if(G.position>=DUNGEON_LENGTH){renderWin();return;}
   checkAndOpenShop(()=>renderNav());
 }
@@ -1543,8 +1861,15 @@ function checkAndOpenShop(cb){
     renderShop(false,'weapons');
   } else if(CHECKPOINTS.includes(G.position)){
     G.lastCheckpoint=G.position;
-    addLog(`Outpost at sector ${G.position} — resupply available.`,'sys');
-    renderShop(true,'weapons');
+    // Clear debuffs at outpost
+    G.activePowerups=G.activePowerups.filter(p=>!p.startsWith('WEAKENED')&&!p.startsWith('DRAINED')&&!p.startsWith('JINXED'));
+    addLog(`Outpost at sector ${G.position} — resupply available. Debuffs cleared.`,'sys');
+    const newUnlocks=CONSUMABLES.filter(c=>c.price>0&&c.unlockZone===G.position);
+    if(newUnlocks.length){
+      showUnlockPopup(newUnlocks,()=>renderShop(true,'items'));
+    } else {
+      renderShop(true,'weapons');
+    }
   } else {
     cb();
   }
@@ -1580,7 +1905,9 @@ function renderDead(){
         <button class="btn btn-accent" onclick="showLaunchPage()" style="padding:12px 24px;font-size:11px;letter-spacing:3px">⟳ NEW RUNNER</button>
         ${!G.tutorialDone
           ?`<button class="btn btn-blue" onclick="restartRookDeployment()" style="padding:12px 24px;font-size:11px;letter-spacing:3px">↩ RESTART ROOK DEPLOYMENT</button>`
-          :`<button class="btn btn-blue" onclick="restartFromCheckpoint()" style="padding:12px 24px;font-size:11px;letter-spacing:3px">↩ FROM ${CHECKPOINTS.filter(c=>c<=G.position).sort((a,b)=>b-a)[0]===0?'BASECAMP':'OUTPOST '+(CHECKPOINTS.filter(c=>c<=G.position).sort((a,b)=>b-a)[0]||0)}</button>`
+          :(G.difficulty==='normal'
+            ?`<button class="btn btn-blue" onclick="restartFromCheckpointKeepStats()" style="padding:12px 24px;font-size:11px;letter-spacing:3px">↩ FROM ${CHECKPOINTS.filter(c=>c<=G.position).sort((a,b)=>b-a)[0]===0?'BASECAMP':'OUTPOST '+(CHECKPOINTS.filter(c=>c<=G.position).sort((a,b)=>b-a)[0]||0)}</button>`
+            :'')
         }
       </div>
     </div>`);
@@ -1591,14 +1918,18 @@ function renderWin(){
   playerLevel++;
   localStorage.setItem('runners_playerLevel',playerLevel);
   const diff=DIFFICULTIES[G.difficulty]||DIFFICULTIES.normal;
+  const lvlBonus=G.difficulty==='brutal'?200:G.difficulty==='hard'?150:100;
+  G.credits+=lvlBonus;
+  G.totalCredits+=lvlBonus;
   const nextNg=G.ngPlusLevel+1;
   setScreen('// MISSION COMPLETE',`
     <div class="endscreen fade-in">
       <div style="font-size:44px;margin-bottom:8px">🏆</div>
       <div class="end-title" style="font-size:26px;color:var(--green)">DUNGEON CLEARED</div>
       <div style="color:var(--text3);font-size:9px;letter-spacing:4px;margin:8px 0 6px">ALL SECTORS CONQUERED</div>
-      <div style="font-family:'Orbitron',monospace;font-size:12px;color:var(--accent);letter-spacing:3px;margin-bottom:16px">RUNNER LEVEL: ${playerLevel}</div>
-      ${G.ngPlusLevel>0?`<div style="font-family:'Orbitron',monospace;font-size:10px;color:var(--purple);letter-spacing:3px;margin-bottom:16px">NG+ ${G.ngPlusLevel} COMPLETE</div>`:''}
+      <div style="font-family:'Orbitron',monospace;font-size:12px;color:var(--accent);letter-spacing:3px;margin-bottom:6px">RUNNER LEVEL: ${playerLevel}</div>
+      <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--yellow);letter-spacing:2px;margin-bottom:16px">+${lvlBonus} CREDITS BONUS</div>
+      ${G.ngPlusLevel>0?`<div style="font-family:'Orbitron',monospace;font-size:10px;color:var(--purple);letter-spacing:3px;margin-bottom:16px">LOOP ${G.ngPlusLevel} COMPLETE — ENEMIES HARDER</div>`:''}
 
       <div style="background:var(--bg3);border:1px solid var(--border);padding:14px 16px;max-width:420px;margin:0 auto 16px;text-align:left">
         <div style="font-size:8px;letter-spacing:3px;color:var(--text3);margin-bottom:12px">FINAL STATS</div>
@@ -1615,7 +1946,7 @@ function renderWin(){
       </div>
 
       <div class="btn-row" style="justify-content:center;flex-wrap:wrap;gap:10px">
-        <button class="btn btn-green" onclick="startNewGamePlus()" style="padding:12px 24px;font-size:11px;letter-spacing:3px">⚡ CONTINUE+ NG${nextNg}</button>
+        <button class="btn btn-green" onclick="startNewGamePlus()" style="padding:12px 24px;font-size:11px;letter-spacing:3px">⚡ KEEP RUNNING — HARDER+</button>
         <button class="btn btn-accent" onclick="showLaunchPage()" style="padding:12px 24px;font-size:11px;letter-spacing:3px">⟳ NEW RUNNER</button>
       </div>
     </div>`);
@@ -1627,7 +1958,7 @@ function resetGame(){
      inventory:{},shopBought:{},
      position:0,lastCheckpoint:0,phase:'shop',currentEnemy:null,spinning:false,spinType:null,
      activePowerups:[],shielded:false,luckyBonus:0,tempPower:0,empActive:false,kills:0,totalCredits:0,
-     lastItemUse:null,difficulty:diff,ngPlusLevel:0,tutorialDone:false,tutorialEncounters:0};
+     lastItemUse:null,difficulty:diff,ngPlusLevel:0,bossHp:0,bossMaxHp:3,tutorialDone:false,tutorialEncounters:0,regenImplant:false};
   itemQueue={};
   document.getElementById('logWrap').innerHTML=`
     <div class="log-line sys">&gt; NEW RUNNER DEPLOYED — SYSTEM RESET</div>
@@ -1638,6 +1969,7 @@ function resetGame(){
 
 function startNewGamePlus(){
   G.ngPlusLevel++;
+  G.tutorialDone=true;
   G.hp=G.maxHp;
   G.position=0;
   G.lastCheckpoint=0;
@@ -1652,12 +1984,18 @@ function startNewGamePlus(){
   G.activePowerups=[];
   G.shopBought={};
   G.lastItemUse=null;
+  G.bossHp=0;
+  G.bossMaxHp=3;
+  // Keep: credits, powerLevel, ownedWeapons, equippedWeapon, inventory (carried over)
   itemQueue={};
   const diff=DIFFICULTIES[G.difficulty]||DIFFICULTIES.normal;
+  const enemyScale=Math.round(G.ngPlusLevel*15);
+  const playerScale=Math.round(G.ngPlusLevel*10);
   document.getElementById('logWrap').innerHTML=`
-    <div class="log-line sys">&gt; NEW GAME+ LEVEL ${G.ngPlusLevel} — ENEMIES STRENGTHENED</div>
-    <div class="log-line sys">&gt; DIFFICULTY: ${diff.label} // NG+${G.ngPlusLevel}</div>
-    <div class="log-line sys">&gt; PROGRESS RETAINED — SHOP LIMITS REDUCED</div>`;
+    <div class="log-line sys">&gt; KEEP RUNNING — LOOP ${G.ngPlusLevel}</div>
+    <div class="log-line sys">&gt; DIFFICULTY: ${diff.label} — ENEMIES +${enemyScale}% / PLAYER +${playerScale}%</div>
+    <div class="log-line sys">&gt; POWER CAP: ${ngPowerCap()} — ALL ITEMS UNLOCKED</div>
+    <div class="log-line sys">&gt; CREDITS, WEAPONS &amp; INVENTORY CARRIED OVER</div>`;
   updateHUD();renderMap();renderShop(false,'weapons');
 }
 
@@ -1668,7 +2006,7 @@ function showLaunchPage(){
 
 function renderLaunchPage(){
   const lvlEl=document.getElementById('launchLevel');
-  lvlEl.innerHTML=playerLevel>0?`RUNNER LEVEL: <span>${playerLevel}</span>`:'';
+  lvlEl.innerHTML=playerLevel>0?`RUNNER LEVEL: <span>${playerLevel}</span> <button onclick="resetPlayerLevel()" style="background:transparent;border:1px solid var(--border2);color:var(--text3);font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:2px;padding:3px 8px;cursor:pointer;margin-left:8px;vertical-align:middle" onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">RESET</button>`:'';
   const ngEl=document.getElementById('launchNgBadge');
   ngEl.textContent='';
   const group=document.getElementById('diffGroup');
@@ -1681,6 +2019,20 @@ function renderLaunchPage(){
   if(el) launchGlitch=createGlitchEngine(el);
 }
 
+function resetPlayerLevel(){
+  playerLevel=0;
+  localStorage.setItem('runners_playerLevel','0');
+  selectedDifficulty='normal';
+  // Reset all game state to fresh defaults
+  G={hp:100,maxHp:100,powerLevel:10,credits:200,equippedWeapon:'smg',ownedWeapons:['fists','smg'],
+     inventory:{},shopBought:{},
+     position:0,lastCheckpoint:0,phase:'shop',currentEnemy:null,spinning:false,spinType:null,
+     activePowerups:[],shielded:false,luckyBonus:0,tempPower:0,empActive:false,kills:0,totalCredits:0,
+     lastItemUse:null,difficulty:'normal',ngPlusLevel:0,bossHp:0,bossMaxHp:3,tutorialDone:false,tutorialEncounters:0,regenImplant:false};
+  itemQueue={};
+  renderLaunchPage();
+}
+
 function selectDifficulty(key){
   selectedDifficulty=key;
   renderLaunchPage();
@@ -1690,18 +2042,28 @@ function startFromLaunch(){
   if(launchGlitch){launchGlitch.stop();launchGlitch=null;}
   document.getElementById('launchPage').style.display='none';
   resetGame();
-  // Override for tutorial: fists only, no credits, no SMG
-  G.credits=0;
-  G.totalCredits=0;
-  G.ownedWeapons=['fists'];
-  G.equippedWeapon='fists';
-  G.tutorialEncounters=0;
-  G.tutorialDone=false;
-  document.getElementById('logWrap').innerHTML=`
-    <div class="log-line sys">&gt; ROOK DEPLOYMENT INITIATED</div>
-    <div class="log-line sys">&gt; SURVIVE 2 ENCOUNTERS TO REACH BASECAMP</div>`;
-  updateHUD();
-  renderTutorialIntro();
+  if(playerLevel>0){
+    // Veteran runner — skip rook phase, start at basecamp with SMG
+    G.tutorialDone=true;
+    document.getElementById('logWrap').innerHTML=`
+      <div class="log-line sys">&gt; VETERAN RUNNER DEPLOYED — LEVEL ${playerLevel}</div>
+      <div class="log-line sys">&gt; DIFFICULTY: ${(DIFFICULTIES[G.difficulty]||DIFFICULTIES.normal).label}</div>
+      <div class="log-line sys">&gt; VISIT BASECAMP ARMORY BEFORE DEPLOYING</div>`;
+    updateHUD();renderMap();renderShop(false,'weapons');
+  } else {
+    // First run — rook deployment
+    G.credits=0;
+    G.totalCredits=0;
+    G.ownedWeapons=['fists'];
+    G.equippedWeapon='fists';
+    G.tutorialEncounters=0;
+    G.tutorialDone=false;
+    document.getElementById('logWrap').innerHTML=`
+      <div class="log-line sys">&gt; ROOK DEPLOYMENT INITIATED</div>
+      <div class="log-line sys">&gt; SURVIVE 2 ENCOUNTERS TO REACH BASECAMP</div>`;
+    updateHUD();
+    renderTutorialIntro();
+  }
 }
 
 // ═══════════════════════════════════════════
@@ -1816,9 +2178,34 @@ function restartFromCheckpoint(){
   G.empActive=false;
   G.activePowerups=[];
   G.lastItemUse=null;
-  G.shopBought={};
+  // shopBought intentionally NOT reset — per-outpost purchase limits persist
   itemQueue={};
   addLog(`Resuming from outpost at sector ${cp} — integrity restored.`,'sys');
+  updateHUD();renderMap();
+  renderShop(cp>0,'weapons');
+}
+
+function restartFromCheckpointKeepStats(){
+  // Normal difficulty death restart — keep ALL stats (hp, credits, power, inventory, weapons)
+  const cp=CHECKPOINTS.filter(c=>c<=G.position).sort((a,b)=>b-a)[0]||0;
+  G.position=cp;
+  G.lastCheckpoint=cp;
+  G.phase='shop';
+  G.currentEnemy=null;
+  G.spinning=false;
+  G.spinType=null;
+  // Restart with 50 integrity instead of full
+  G.hp=50;
+  // Keep: credits, powerLevel, ownedWeapons, equippedWeapon, inventory
+  // Clear combat-only buffs
+  G.shielded=false;
+  G.luckyBonus=0;
+  G.tempPower=0;
+  G.empActive=false;
+  G.activePowerups=[];
+  G.lastItemUse=null;
+  itemQueue={};
+  addLog(`Resuming from ${cp===0?'Basecamp':'Outpost '+cp} — all progress retained.`,'sys');
   updateHUD();renderMap();
   renderShop(cp>0,'weapons');
 }
@@ -1965,6 +2352,8 @@ function togglePause(){
   const btn=document.getElementById('pauseBtn');
   if(paused){
     // Populate live stats
+    const diff=DIFFICULTIES[G.difficulty]||DIFFICULTIES.normal;
+    document.getElementById('pauseLevel').innerHTML=`RUNNER LVL ${playerLevel}${G.ngPlusLevel>0?' <span style="color:var(--purple)">NG+'+G.ngPlusLevel+'</span>':''} — <span style="color:${diff.color}">${diff.label}</span>`;
     const w=equippedWeapon();
     const hpPct=Math.round((G.hp/G.maxHp)*100);
     document.getElementById('pauseStats').innerHTML=`
